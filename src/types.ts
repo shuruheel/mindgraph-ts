@@ -73,14 +73,15 @@ export interface EntityRequest {
   source_uid?: string;
   target_uid?: string;
   edge_type?: string;
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
 export interface ArgumentRequest {
   claim: { label: string; content: string; confidence?: number };
-  evidence?: { label: string; description: string; evidence_type?: string }[];
-  warrant?: { label: string; principle: string };
-  argument?: { label: string; summary: string };
+  evidence?: { label: string; description: string; evidence_type?: string; props?: Record<string, unknown> }[];
+  warrant?: { label: string; principle: string; props?: Record<string, unknown> };
+  argument?: { label: string; summary: string; props?: Record<string, unknown> };
   refutes_uid?: string;
   extends_uid?: string;
   source_uids?: string[];
