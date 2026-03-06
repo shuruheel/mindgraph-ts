@@ -171,13 +171,16 @@ export interface RiskRequest {
 }
 
 export interface SessionRequest {
-  action: "open" | "trace" | "close";
+  action: "open" | "trace" | "close" | "journal";
   label?: string;
   focus?: string;
   session_uid?: string;
   trace_content?: string;
   trace_type?: string;
   relevant_node_uids?: string[];
+  content?: string;
+  journal_type?: string;
+  tags?: string[];
   agent_id?: string;
 }
 

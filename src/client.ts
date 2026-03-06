@@ -171,6 +171,25 @@ export class MindGraph {
     return this.post("/memory/session", req);
   }
 
+  async journal(
+    label: string,
+    content: string,
+    options?: {
+      session_uid?: string;
+      journal_type?: string;
+      tags?: string[];
+      relevant_node_uids?: string[];
+      agent_id?: string;
+    }
+  ): Promise<unknown> {
+    return this.post("/memory/session", {
+      action: "journal" as const,
+      label,
+      content,
+      ...options,
+    });
+  }
+
   async distill(req: DistillRequest): Promise<unknown> {
     return this.post("/memory/distill", req);
   }
