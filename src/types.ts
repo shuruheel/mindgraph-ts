@@ -56,6 +56,7 @@ export interface IngestRequest {
   timestamp?: number;
   confidence?: number;
   salience?: number;
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -83,6 +84,7 @@ export interface ArgumentRequest {
   refutes_uid?: string;
   extends_uid?: string;
   source_uids?: string[];
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -98,11 +100,12 @@ export interface InquiryRequest {
   confidence?: number;
   salience?: number;
   related_uids?: string[];
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
 export interface StructureRequest {
-  action: "concept" | "pattern" | "mechanism" | "model" | "model_evaluation" | "analogy" | "inference_chain" | "reasoning_strategy" | "sensitivity_analysis" | "theorem" | "equation";
+  action: "concept" | "pattern" | "mechanism" | "model" | "model_evaluation" | "analogy" | "inference_chain" | "reasoning_strategy" | "sensitivity_analysis" | "theorem" | "equation" | "method" | "experiment";
   label: string;
   content: string;
   summary?: string;
@@ -115,6 +118,7 @@ export interface StructureRequest {
   proven_by_uid?: string;
   related_uids?: string[];
   confidence?: number;
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -127,6 +131,7 @@ export interface CommitmentRequest {
   parent_uid?: string;
   due_date?: number;
   motivated_by_uid?: string[];
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -140,6 +145,7 @@ export interface DeliberationRequest {
   constraint_type?: string;
   blocks_uid?: string;
   informs_uid?: string[];
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -154,6 +160,7 @@ export interface ProcedureRequest {
   control_type?: string;
   uses_affordance_uids?: string[];
   goal_uid?: string;
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -167,6 +174,7 @@ export interface RiskRequest {
   mitigations?: string[];
   residual_risk?: number;
   filter_uid?: string;
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -181,6 +189,7 @@ export interface SessionRequest {
   content?: string;
   journal_type?: string;
   tags?: string[];
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -190,6 +199,7 @@ export interface DistillRequest {
   summarizes_uids?: string[];
   session_uid?: string;
   importance?: number;
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -199,6 +209,7 @@ export interface MemoryConfigRequest {
   key?: string;
   value?: string;
   policy_content?: string;
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -214,6 +225,7 @@ export interface PlanRequest {
   target_uid?: string;
   status?: string;
   related_uids?: string[];
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -229,6 +241,7 @@ export interface GovernanceRequest {
   resolution_note?: string;
   requires_plan_uid?: string;
   approval_request?: string;
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
@@ -245,6 +258,7 @@ export interface ExecutionRequest {
   agent_role?: string;
   filter_plan_uid?: string;
   related_uids?: string[];
+  props?: Record<string, unknown>;
   agent_id?: string;
 }
 
