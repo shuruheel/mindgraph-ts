@@ -47,12 +47,15 @@ export interface PathStep {
 // ---- Request types ----
 
 export interface IngestRequest {
-  action: "create_source" | "create_snippet" | "create_observation";
+  action: "source" | "snippet" | "observation";
   label: string;
-  content?: string;
-  uri?: string;
+  content: string;
   source_uid?: string;
-  entity_type?: string;
+  medium?: string;
+  url?: string;
+  timestamp?: number;
+  confidence?: number;
+  salience?: number;
   agent_id?: string;
 }
 
@@ -74,127 +77,171 @@ export interface EntityRequest {
 
 export interface ArgumentRequest {
   claim: { label: string; content: string; confidence?: number };
-  evidence: { label: string; description: string }[];
+  evidence?: { label: string; description: string; evidence_type?: string }[];
   warrant?: { label: string; principle: string };
+  argument?: { label: string; summary: string };
+  refutes_uid?: string;
+  extends_uid?: string;
+  source_uids?: string[];
   agent_id?: string;
 }
 
 export interface InquiryRequest {
-  action: string;
+  action: "hypothesis" | "theory" | "paradigm" | "anomaly" | "assumption" | "question" | "open_question";
   label: string;
-  content?: string;
-  description?: string;
-  statement?: string;
-  question?: string;
+  content: string;
+  status?: string;
+  anomalous_to_uid?: string;
+  assumes_uid?: string[];
+  tests_uid?: string;
+  addresses_uid?: string;
   confidence?: number;
+  salience?: number;
+  related_uids?: string[];
   agent_id?: string;
-  [key: string]: unknown;
 }
 
 export interface StructureRequest {
-  action: string;
+  action: "concept" | "pattern" | "mechanism" | "model" | "model_evaluation" | "analogy" | "inference_chain" | "reasoning_strategy" | "sensitivity_analysis" | "theorem" | "equation";
   label: string;
-  content?: string;
-  definition?: string;
-  description?: string;
+  content: string;
+  summary?: string;
+  analogous_to_uid?: string;
+  transfers_to_uid?: string[];
+  evaluates_uid?: string;
+  outperforms_uid?: string;
+  chain_steps?: string[];
+  derived_from_uid?: string[];
+  proven_by_uid?: string;
+  related_uids?: string[];
+  confidence?: number;
   agent_id?: string;
-  [key: string]: unknown;
 }
 
 export interface CommitmentRequest {
-  action: "create_goal" | "create_project" | "create_milestone";
+  action: "goal" | "project" | "milestone";
   label: string;
-  description?: string;
-  motivated_by_uid?: string[];
+  description: string;
+  priority?: string;
+  status?: string;
   parent_uid?: string;
+  due_date?: number;
+  motivated_by_uid?: string[];
   agent_id?: string;
 }
 
 export interface DeliberationRequest {
-  action: "open" | "add_option" | "add_constraint" | "resolve" | "get_open";
+  action: "open_decision" | "add_option" | "add_constraint" | "resolve" | "get_open";
   label?: string;
   description?: string;
   decision_uid?: string;
   chosen_option_uid?: string;
+  resolution_rationale?: string;
+  constraint_type?: string;
+  blocks_uid?: string;
+  informs_uid?: string[];
   agent_id?: string;
-  [key: string]: unknown;
 }
 
 export interface ProcedureRequest {
-  action: "create_flow" | "add_step" | "create_affordance" | "create_control";
+  action: "create_flow" | "add_step" | "add_affordance" | "add_control";
   label: string;
   description?: string;
   flow_uid?: string;
+  step_order?: number;
   previous_step_uid?: string;
+  affordance_type?: string;
+  control_type?: string;
+  uses_affordance_uids?: string[];
+  goal_uid?: string;
   agent_id?: string;
-  [key: string]: unknown;
 }
 
 export interface RiskRequest {
   action: "assess" | "get_assessments";
   label?: string;
   description?: string;
-  target_uid?: string;
+  assessed_uid?: string;
+  severity?: string;
+  likelihood?: number;
+  mitigations?: string[];
+  residual_risk?: number;
   filter_uid?: string;
   agent_id?: string;
 }
 
 export interface SessionRequest {
   action: "open" | "trace" | "close";
+  label?: string;
   focus?: string;
   session_uid?: string;
-  content?: string;
+  trace_content?: string;
+  trace_type?: string;
+  relevant_node_uids?: string[];
   agent_id?: string;
 }
 
 export interface DistillRequest {
+  label: string;
   content: string;
-  label?: string;
-  summary?: string;
-  source_uids: string[];
+  summarizes_uids?: string[];
   session_uid?: string;
+  importance?: number;
   agent_id?: string;
 }
 
 export interface MemoryConfigRequest {
   action: "set_preference" | "get_preferences" | "set_policy" | "get_policies";
+  label?: string;
   key?: string;
   value?: string;
-  preference_type?: string;
-  policy_type?: string;
-  target_node_type?: string;
-  condition?: string;
-  policy_action?: string;
+  policy_content?: string;
   agent_id?: string;
 }
 
 export interface PlanRequest {
-  action: "create_task" | "create_plan" | "add_step" | "update_status";
+  action: "create_task" | "create_plan" | "add_step" | "update_status" | "get_plan";
   label?: string;
   description?: string;
+  goal_uid?: string;
   task_uid?: string;
   plan_uid?: string;
+  step_order?: number;
+  depends_on_uids?: string[];
   target_uid?: string;
   status?: string;
+  related_uids?: string[];
   agent_id?: string;
 }
 
 export interface GovernanceRequest {
-  action: string;
+  action: "create_policy" | "set_budget" | "request_approval" | "resolve_approval" | "get_pending";
   label?: string;
-  description?: string;
+  policy_content?: string;
+  budget_type?: string;
+  budget_limit?: number;
+  governed_uid?: string;
+  approval_uid?: string;
+  approved?: boolean;
+  resolution_note?: string;
+  requires_plan_uid?: string;
+  approval_request?: string;
   agent_id?: string;
-  [key: string]: unknown;
 }
 
 export interface ExecutionRequest {
-  action: "register_agent" | "start" | "complete" | "fail";
+  action: "start" | "complete" | "fail" | "register_agent" | "get_executions";
   label?: string;
-  description?: string;
-  plan_step_uid?: string;
+  plan_uid?: string;
+  executor_uid?: string;
   execution_uid?: string;
-  result_summary?: string;
-  error?: string;
+  outcome?: string;
+  produces_node_uid?: string;
+  error_description?: string;
+  agent_name?: string;
+  agent_role?: string;
+  filter_plan_uid?: string;
+  related_uids?: string[];
   agent_id?: string;
 }
 
@@ -205,18 +252,20 @@ export interface RetrieveRequest {
   threshold?: number;
   layer?: string;
   node_types?: string[];
+  confidence_min?: number;
+  salience_min?: number;
   limit?: number;
   offset?: number;
 }
 
 export interface TraverseRequest {
   action: "chain" | "neighborhood" | "path" | "subgraph";
-  uid?: string;
-  from_uid?: string;
-  to_uid?: string;
+  start_uid: string;
+  end_uid?: string;
   max_depth?: number;
   direction?: "outgoing" | "incoming" | "both";
   edge_types?: string[];
+  weight_threshold?: number;
 }
 
 export interface EvolveRequest {
@@ -228,6 +277,11 @@ export interface EvolveRequest {
   salience?: number;
   props_patch?: Record<string, unknown>;
   reason?: string;
+  cascade?: boolean;
+  half_life_secs?: number;
+  min_salience?: number;
+  min_age_secs?: number;
+  version?: number;
   agent_id?: string;
 }
 

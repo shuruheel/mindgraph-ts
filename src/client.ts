@@ -288,7 +288,7 @@ export class MindGraph {
   async reasoningChain(uid: string, maxDepth = 5): Promise<PathStep[]> {
     return this.post("/traverse", {
       action: "chain",
-      uid,
+      start_uid: uid,
       max_depth: maxDepth,
     });
   }
@@ -296,7 +296,7 @@ export class MindGraph {
   async neighborhood(uid: string, maxDepth = 1): Promise<PathStep[]> {
     return this.post("/traverse", {
       action: "neighborhood",
-      uid,
+      start_uid: uid,
       max_depth: maxDepth,
     });
   }
