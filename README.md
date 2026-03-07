@@ -81,6 +81,7 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 | Method | Description |
 |--------|-------------|
 | `session(req)` | Open a session, record traces, or close a session |
+| `journal(label, props, options?)` | Record a journal entry linked to an optional session |
 | `distill(req)` | Create a summary that distills multiple source nodes |
 | `memoryConfig(req)` | Set/get preferences and memory policies |
 
@@ -117,6 +118,13 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 | `reasoningChain(uid, maxDepth?)` | Follow epistemic edges from a node |
 | `neighborhood(uid, maxDepth?)` | Get all nodes within N hops |
 
+### Lifecycle Shortcuts
+
+| Method | Description |
+|--------|-------------|
+| `tombstone(uid, reason?, agentId?)` | Soft-delete a node |
+| `restore(uid, agentId?)` | Restore a tombstoned node |
+
 ### Cross-cutting
 
 | Method | Description |
@@ -131,6 +139,17 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 |--------|-------------|
 | `health()` | Health check |
 | `stats()` | Graph-wide statistics |
+
+### Management (Cloud only)
+
+| Method | Description |
+|--------|-------------|
+| `signup(email, password)` | Create a new account |
+| `login(email, password)` | Login and receive JWT |
+| `createApiKey(name?)` | Create an API key |
+| `listApiKeys()` | List all API keys |
+| `revokeApiKey(id)` | Revoke an API key |
+| `getUsage()` | Get usage statistics |
 
 ## Error Handling
 
