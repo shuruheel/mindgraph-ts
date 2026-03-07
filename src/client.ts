@@ -120,13 +120,13 @@ export class MindGraph {
   /** Convenience: create or find an entity by label. */
   async findOrCreateEntity(
     label: string,
-    entityType = "other",
+    props?: Record<string, unknown>,
     agentId?: string,
   ): Promise<GraphNode & { created: boolean }> {
     return this.post("/reality/entity", {
       action: "create",
       label,
-      entity_type: entityType,
+      props: { entity_type: "other", ...props },
       agent_id: agentId,
     });
   }
@@ -173,19 +173,20 @@ export class MindGraph {
 
   async journal(
     label: string,
-    content: string,
+    props: Record<string, unknown>,
     options?: {
+      summary?: string;
       session_uid?: string;
-      journal_type?: string;
-      tags?: string[];
       relevant_node_uids?: string[];
+      confidence?: number;
+      salience?: number;
       agent_id?: string;
     }
   ): Promise<unknown> {
     return this.post("/memory/session", {
       action: "journal" as const,
       label,
-      content,
+      props,
       ...options,
     });
   }
