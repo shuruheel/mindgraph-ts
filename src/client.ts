@@ -306,19 +306,21 @@ export class MindGraph {
   // ---- Traversal shortcuts ----
 
   async reasoningChain(uid: string, maxDepth = 5): Promise<PathStep[]> {
-    return this.post("/traverse", {
+    const r = await this.post("/traverse", {
       action: "chain",
       start_uid: uid,
       max_depth: maxDepth,
     });
+    return (r as any)?.steps ?? r;
   }
 
   async neighborhood(uid: string, maxDepth = 1): Promise<PathStep[]> {
-    return this.post("/traverse", {
+    const r = await this.post("/traverse", {
       action: "neighborhood",
       start_uid: uid,
       max_depth: maxDepth,
     });
+    return (r as any)?.steps ?? r;
   }
 
   // ---- Lifecycle shortcuts ----
