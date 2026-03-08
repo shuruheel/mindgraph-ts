@@ -151,6 +151,10 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 | `revokeApiKey(id)` | Revoke an API key |
 | `getUsage()` | Get usage statistics |
 
+## Examples
+
+See [`examples/`](examples/) for runnable demos, including a [research continuity](examples/research-continuity.ts) scenario showing cross-session memory retrieval.
+
 ## Error Handling
 
 All methods throw `MindGraphError` on HTTP errors:
