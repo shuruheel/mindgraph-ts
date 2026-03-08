@@ -4,7 +4,7 @@ import type {
   GraphEdge,
   SearchResult,
   PathStep,
-  IngestRequest,
+  CaptureRequest,
   EntityRequest,
   ArgumentRequest,
   InquiryRequest,
@@ -109,8 +109,8 @@ export class MindGraph {
 
   // ---- Reality Layer ----
 
-  async ingest(req: IngestRequest): Promise<unknown> {
-    return this.post("/reality/ingest", req);
+  async capture(req: CaptureRequest): Promise<unknown> {
+    return this.post("/reality/capture", req);
   }
 
   async entity(req: EntityRequest): Promise<unknown> {

@@ -53,9 +53,9 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
   // ============================================================
   // 3. Reality Layer
   // ============================================================
-  describe("Reality: Ingest", () => {
+  describe("Reality: Capture", () => {
     test("source", async () => {
-      const r = await mg.ingest({
+      const r = await mg.capture({
         action: "source",
         label: "TS SDK Test Source",
         summary: "Integration test source",
@@ -66,7 +66,7 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
     });
 
     test("snippet", async () => {
-      const r = await mg.ingest({
+      const r = await mg.capture({
         action: "snippet",
         label: "TS SDK Test Snippet",
         summary: "A snippet from the source",
@@ -76,7 +76,7 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
     });
 
     test("observation", async () => {
-      const r = await mg.ingest({
+      const r = await mg.capture({
         action: "observation",
         label: "TS SDK Test Observation",
         summary: "Something observed during testing",
@@ -742,7 +742,7 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
 
     test("tombstone and restore", async () => {
       // Create a temp node, tombstone it, then restore
-      const node = await mg.ingest({
+      const node = await mg.capture({
         action: "observation",
         label: "TS Evolve Temp",
         summary: "Will be tombstoned",
@@ -846,7 +846,7 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
   // ============================================================
   describe("Lifecycle Shortcuts", () => {
     test("tombstone + restore", async () => {
-      const node = await mg.ingest({
+      const node = await mg.capture({
         action: "observation",
         label: "TS Lifecycle Temp",
         summary: "For tombstone/restore shortcut test",

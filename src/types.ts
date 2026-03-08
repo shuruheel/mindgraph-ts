@@ -46,7 +46,7 @@ export interface PathStep {
 
 // ---- Request types ----
 
-export interface IngestRequest {
+export interface CaptureRequest {
   action: "source" | "snippet" | "observation";
   label: string;
   summary?: string;

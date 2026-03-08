@@ -50,7 +50,7 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 
 | Method | Description |
 |--------|-------------|
-| `ingest(req)` | Ingest a source, snippet, or observation |
+| `capture(req)` | Capture a source, snippet, or observation |
 | `entity(req)` | Create, alias, resolve, or merge entities |
 | `findOrCreateEntity(label, entityType?, agentId?)` | Convenience: create or find an entity by label |
 

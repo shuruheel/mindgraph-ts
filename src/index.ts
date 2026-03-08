@@ -5,7 +5,7 @@ export type {
   GraphEdge,
   SearchResult,
   PathStep,
-  IngestRequest,
+  CaptureRequest,
   EntityRequest,
   ArgumentRequest,
   InquiryRequest,
