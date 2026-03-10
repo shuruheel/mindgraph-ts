@@ -118,6 +118,17 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 | `reasoningChain(uid, maxDepth?)` | Follow epistemic edges from a node |
 | `neighborhood(uid, maxDepth?)` | Get all nodes within N hops |
 
+### Ingestion & Retrieval
+
+| Method | Description |
+|--------|-------------|
+| `ingestChunk(req)` | Ingest a single text chunk (sync): stores, embeds, and runs LLM extraction |
+| `ingestDocument(req)` | Ingest a full document (async): chunks text, returns job ID |
+| `ingestSession(req)` | Ingest a session transcript (async): links to session, returns job ID |
+| `retrieveContext(req)` | Retrieve semantically matched chunks + connected graph nodes/edges |
+| `getJob(id)` | Get async job status and progress |
+| `clearGraph()` | Clear all graph data |
+
 ### Lifecycle Shortcuts
 
 | Method | Description |
