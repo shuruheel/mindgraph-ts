@@ -299,6 +299,99 @@ export interface EvolveRequest {
   agent_id?: string;
 }
 
+// ---- Ingestion types ----
+
+export interface IngestChunkRequest {
+  content: string;
+  chunk_type?: string;
+  document_uid?: string;
+  chunk_index?: number;
+  label?: string;
+  layers?: string[];
+  agent_id?: string;
+}
+
+export interface IngestChunkResponse {
+  chunk_uid: string;
+  nodes_created: number;
+  nodes_deduplicated: number;
+  edges_created: number;
+  extracted_node_uids: string[];
+  errors: string[];
+}
+
+export interface IngestDocumentRequest {
+  content: string;
+  title?: string;
+  document_type?: string;
+  source_uri?: string;
+  chunk_size?: number;
+  chunk_overlap?: number;
+  layers?: string[];
+  agent_id?: string;
+}
+
+export interface IngestDocumentResponse {
+  job_id: string;
+  document_uid: string;
+}
+
+export interface IngestSessionRequest {
+  content: string;
+  session_uid?: string;
+  chunk_size?: number;
+  chunk_overlap?: number;
+  layers?: string[];
+  agent_id?: string;
+}
+
+export interface RetrieveContextRequest {
+  query: string;
+  k?: number;
+  depth?: number;
+  node_types?: string[];
+  layer?: string;
+  include_chunks?: boolean;
+  include_graph?: boolean;
+  min_similarity?: number;
+}
+
+export interface RetrieveContextResponse {
+  chunks: {
+    chunk_uid: string;
+    content: string;
+    score: number;
+    document_uid: string | null;
+    chunk_index: number | null;
+  }[];
+  graph: {
+    nodes: Record<string, unknown>[];
+    edges: Record<string, unknown>[];
+  };
+}
+
+export interface Job {
+  id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  progress: {
+    total_chunks: number;
+    processed_chunks: number;
+    nodes_created: number;
+    edges_created: number;
+  };
+  result: Record<string, unknown> | null;
+  error: string | null;
+}
+
+export interface ClearResponse {
+  cleared: boolean;
+  nodes_removed: number;
+  edges_removed: number;
+  versions_removed: number;
+  aliases_removed: number;
+  embeddings_removed: number;
+}
+
 // ---- Auth types ----
 
 export interface SignupRequest {

@@ -27,6 +27,15 @@ import type {
   CreateOrgRequest,
   CreateApiKeyRequest,
   ApiKeyResponse,
+  IngestChunkRequest,
+  IngestChunkResponse,
+  IngestDocumentRequest,
+  IngestDocumentResponse,
+  IngestSessionRequest,
+  RetrieveContextRequest,
+  RetrieveContextResponse,
+  Job,
+  ClearResponse,
 } from "./types.js";
 
 export class MindGraphError extends Error {
@@ -340,6 +349,32 @@ export class MindGraph {
       uid,
       agent_id: agentId,
     });
+  }
+
+  // ---- Ingestion & Retrieval ----
+
+  async ingestChunk(req: IngestChunkRequest): Promise<IngestChunkResponse> {
+    return this.post("/ingest/chunk", req);
+  }
+
+  async ingestDocument(req: IngestDocumentRequest): Promise<IngestDocumentResponse> {
+    return this.post("/ingest/document", req);
+  }
+
+  async ingestSession(req: IngestSessionRequest): Promise<IngestDocumentResponse> {
+    return this.post("/ingest/session", req);
+  }
+
+  async retrieveContext(req: RetrieveContextRequest): Promise<RetrieveContextResponse> {
+    return this.post("/retrieve/context", req);
+  }
+
+  async getJob(id: string): Promise<Job> {
+    return this.get(`/jobs/${id}`);
+  }
+
+  async clearGraph(): Promise<ClearResponse> {
+    return this.post("/clear", {});
   }
 
   // ---- Management (Cloud only) ----
