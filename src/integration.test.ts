@@ -92,7 +92,6 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
       const r = await mg.entity({
         action: "create",
         label: "TS SDK Test Entity",
-        summary: "A test entity",
         props: { canonical_name: "ts-test-entity", entity_type: "concept" },
       });
       expect(r).toHaveProperty("uid");
@@ -209,9 +208,9 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
   describe("Epistemic: Argument", () => {
     test("argue", async () => {
       const r = await mg.argue({
-        claim: { label: "TS Claim", statement: "SDKs should be tested" },
+        claim: { label: "TS Claim", props: { statement: "SDKs should be tested" } },
         evidence: [
-          { label: "TS Evidence", statement: "Untested SDKs have more bugs" },
+          { label: "TS Evidence", props: { statement: "Untested SDKs have more bugs" } },
         ],
       });
       expect(r).toHaveProperty("claim_uid");
@@ -447,7 +446,7 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
       const r = await mg.distill({
         label: "TS Lesson Learned",
         summary: "Integration tests catch real bugs",
-        source_uids: [uids.observation],
+        summarizes_uids: [uids.observation],
       });
       expect(r).toHaveProperty("uid");
     });

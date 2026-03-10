@@ -36,6 +36,9 @@ import type {
   RetrieveContextResponse,
   Job,
   ClearResponse,
+  BatchRequest,
+  DecayRequest,
+  PurgeRequest,
 } from "./types.js";
 
 export class MindGraphError extends Error {
@@ -268,6 +271,14 @@ export class MindGraph {
     await this.del(`/node/${uid}`);
   }
 
+  async getNodeHistory(uid: string): Promise<unknown[]> {
+    return this.get(`/node/${uid}/history`);
+  }
+
+  async getNodeAtVersion(uid: string, version: number): Promise<GraphNode> {
+    return this.get(`/node/${uid}/history/${version}`);
+  }
+
   // ---- Edge CRUD ----
 
   async addLink(body: {
@@ -279,6 +290,33 @@ export class MindGraph {
     return this.post("/link", body);
   }
 
+  async addEdge(body: {
+    from_uid: string;
+    to_uid: string;
+    edge_type: string;
+    weight?: number;
+    props?: Record<string, unknown>;
+    agent_id?: string;
+  }): Promise<unknown> {
+    return this.post("/edge", body);
+  }
+
+  async updateEdge(uid: string, body: {
+    weight?: number;
+    props?: Record<string, unknown>;
+    agent_id?: string;
+  }): Promise<unknown> {
+    return this.patch(`/edge/${uid}`, body);
+  }
+
+  async deleteEdge(uid: string): Promise<void> {
+    await this.del(`/edge/${uid}`);
+  }
+
+  async getEdgeHistory(uid: string): Promise<unknown[]> {
+    return this.get(`/edge/${uid}/history`);
+  }
+
   async getEdges(params: {
     from_uid?: string;
     to_uid?: string;
@@ -287,6 +325,18 @@ export class MindGraph {
     if (params.from_uid) qs.set("from_uid", params.from_uid);
     if (params.to_uid) qs.set("to_uid", params.to_uid);
     return this.get(`/edges?${qs}`);
+  }
+
+  async getEdgeBetween(params: {
+    from_uid: string;
+    to_uid: string;
+    edge_type?: string;
+  }): Promise<GraphEdge[]> {
+    const qs = new URLSearchParams();
+    qs.set("from_uid", params.from_uid);
+    qs.set("to_uid", params.to_uid);
+    if (params.edge_type) qs.set("edge_type", params.edge_type);
+    return this.get(`/edge/between?${qs}`);
   }
 
   // ---- Search ----
@@ -312,6 +362,118 @@ export class MindGraph {
     });
   }
 
+  // ---- Nodes listing ----
+
+  async getNodes(params?: {
+    node_type?: string;
+    layer?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<unknown> {
+    const qs = new URLSearchParams();
+    if (params?.node_type) qs.set("node_type", params.node_type);
+    if (params?.layer) qs.set("layer", params.layer);
+    if (params?.limit != null) qs.set("limit", String(params.limit));
+    if (params?.offset != null) qs.set("offset", String(params.offset));
+    return this.get(`/nodes?${qs}`);
+  }
+
+  async getAgentNodes(agentId: string): Promise<GraphNode[]> {
+    return this.get(`/agent/${agentId}/nodes`);
+  }
+
+  // ---- Batch ----
+
+  async batch(req: BatchRequest): Promise<unknown> {
+    return this.post("/batch", req);
+  }
+
+  // ---- Embeddings ----
+
+  async configureEmbeddings(body: {
+    model: string;
+    dimensions: number;
+    distance_metric?: string;
+  }): Promise<unknown> {
+    return this.post("/embeddings/configure", body);
+  }
+
+  async embeddingSearch(body: {
+    vector: number[];
+    k?: number;
+    node_types?: string[];
+    threshold?: number;
+  }): Promise<unknown> {
+    return this.post("/embeddings/search", body);
+  }
+
+  async embeddingSearchText(body: {
+    text: string;
+    k?: number;
+    node_types?: string[];
+    threshold?: number;
+  }): Promise<unknown> {
+    return this.post("/embeddings/search-text", body);
+  }
+
+  async getEmbedding(uid: string): Promise<unknown> {
+    return this.get(`/embeddings/${uid}`);
+  }
+
+  async setEmbedding(uid: string, vector: number[]): Promise<void> {
+    await this.request("PUT", `/embeddings/${uid}`, { vector });
+  }
+
+  async deleteEmbedding(uid: string): Promise<void> {
+    await this.del(`/embeddings/${uid}`);
+  }
+
+  // ---- Entity resolution ----
+
+  async mergeEntities(body: {
+    keep_uid: string;
+    merge_uid: string;
+    agent_id?: string;
+  }): Promise<unknown> {
+    return this.post("/entities/merge", body);
+  }
+
+  async addAlias(body: {
+    text: string;
+    canonical_uid: string;
+    score?: number;
+  }): Promise<unknown> {
+    return this.post("/alias", body);
+  }
+
+  async getAliases(uid: string): Promise<unknown> {
+    return this.get(`/aliases/${uid}`);
+  }
+
+  async resolveAlias(text: string): Promise<unknown> {
+    return this.get(`/resolve?text=${encodeURIComponent(text)}`);
+  }
+
+  // ---- Export / Import ----
+
+  async exportGraph(): Promise<unknown> {
+    return this.get("/export");
+  }
+
+  async importGraph(data: unknown): Promise<unknown> {
+    return this.post("/import", data);
+  }
+
+  // ---- Lifecycle ----
+
+  async decay(req: DecayRequest): Promise<unknown> {
+    return this.post("/decay", req);
+  }
+
+  async purge(req?: PurgeRequest): Promise<unknown> {
+    return this.post("/purge", req ?? {});
+  }
+
   // ---- Traversal shortcuts ----
 
   async reasoningChain(uid: string, maxDepth = 5): Promise<PathStep[]> {
@@ -330,6 +492,15 @@ export class MindGraph {
       max_depth: maxDepth,
     });
     return (r as any)?.steps ?? r;
+  }
+
+  async subgraph(uid: string, opts?: {
+    max_depth?: number;
+    direction?: "outgoing" | "incoming" | "both";
+    edge_types?: string[];
+    weight_threshold?: number;
+  }): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
+    return this.post("/subgraph", { uid, ...opts });
   }
 
   // ---- Lifecycle shortcuts ----
@@ -351,6 +522,32 @@ export class MindGraph {
     });
   }
 
+  // ---- Epistemic queries ----
+
+  async getGoals(): Promise<GraphNode[]> {
+    return this.get("/goals");
+  }
+
+  async getOpenDecisions(): Promise<GraphNode[]> {
+    return this.get("/decisions");
+  }
+
+  async getOpenQuestions(): Promise<GraphNode[]> {
+    return this.get("/questions");
+  }
+
+  async getWeakClaims(): Promise<GraphNode[]> {
+    return this.get("/claims/weak");
+  }
+
+  async getContradictions(): Promise<unknown[]> {
+    return this.get("/contradictions");
+  }
+
+  async getPendingApprovals(): Promise<GraphNode[]> {
+    return this.get("/approvals/pending");
+  }
+
   // ---- Ingestion & Retrieval ----
 
   async ingestChunk(req: IngestChunkRequest): Promise<IngestChunkResponse> {
@@ -369,8 +566,24 @@ export class MindGraph {
     return this.post("/retrieve/context", req);
   }
 
+  async listJobs(): Promise<Job[]> {
+    return this.get("/jobs");
+  }
+
   async getJob(id: string): Promise<Job> {
     return this.get(`/jobs/${id}`);
+  }
+
+  async cancelJob(id: string): Promise<unknown> {
+    return this.post(`/jobs/${id}/cancel`, {});
+  }
+
+  async cleanupOrphans(): Promise<unknown> {
+    return this.post("/ingest/cleanup", {});
+  }
+
+  async embedAll(): Promise<unknown> {
+    return this.post("/ingest/embed-all", {});
   }
 
   async clearGraph(): Promise<ClearResponse> {

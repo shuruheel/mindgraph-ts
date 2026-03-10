@@ -372,6 +372,7 @@ export interface RetrieveContextResponse {
 
 export interface Job {
   id: string;
+  title: string;
   status: "pending" | "processing" | "completed" | "failed";
   progress: {
     total_chunks: number;
@@ -381,6 +382,8 @@ export interface Job {
   };
   result: Record<string, unknown> | null;
   error: string | null;
+  created_at: number;
+  queue_position?: number;
 }
 
 export interface ClearResponse {
@@ -390,6 +393,30 @@ export interface ClearResponse {
   versions_removed: number;
   aliases_removed: number;
   embeddings_removed: number;
+}
+
+export interface BatchRequest {
+  nodes?: {
+    label: string;
+    node_type?: string;
+    props?: Record<string, unknown>;
+  }[];
+  edges?: {
+    from_uid: string;
+    to_uid: string;
+    edge_type: string;
+  }[];
+  agent_id?: string;
+}
+
+export interface DecayRequest {
+  half_life_secs: number;
+  min_salience?: number;
+  min_age_secs?: number;
+}
+
+export interface PurgeRequest {
+  before?: number;
 }
 
 // ---- Auth types ----
