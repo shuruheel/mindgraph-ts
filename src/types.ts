@@ -338,6 +338,7 @@ export interface IngestDocumentResponse {
 
 export interface IngestSessionRequest {
   content: string;
+  title?: string;
   session_uid?: string;
   chunk_size?: number;
   chunk_overlap?: number;
@@ -373,7 +374,7 @@ export interface RetrieveContextResponse {
 export interface Job {
   id: string;
   title: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
   progress: {
     total_chunks: number;
     processed_chunks: number;
@@ -417,34 +418,6 @@ export interface DecayRequest {
 
 export interface PurgeRequest {
   before?: number;
-}
-
-// ---- Auth types ----
-
-export interface SignupRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface CreateOrgRequest {
-  name: string;
-  slug?: string;
-}
-
-export interface CreateApiKeyRequest {
-  name?: string;
-}
-
-export interface ApiKeyResponse {
-  id: string;
-  key: string;
-  name: string;
-  prefix: string;
 }
 
 // ---- Config ----
