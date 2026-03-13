@@ -36,22 +36,7 @@ describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
   });
 
   // ============================================================
-  // 2. Management
-  // ============================================================
-  describe("Management", () => {
-    test("listApiKeys", async () => {
-      const r = await mg.listApiKeys();
-      expect(r).toHaveProperty("api_keys");
-    });
-
-    test("getUsage", async () => {
-      const r = await mg.getUsage();
-      expect(r).toHaveProperty("org_id");
-    });
-  });
-
-  // ============================================================
-  // 3. Reality Layer
+  // 2. Reality Layer
   // ============================================================
   describe("Reality: Capture", () => {
     test("source", async () => {

@@ -22,11 +22,6 @@ import type {
   RetrieveRequest,
   TraverseRequest,
   EvolveRequest,
-  SignupRequest,
-  LoginRequest,
-  CreateOrgRequest,
-  CreateApiKeyRequest,
-  ApiKeyResponse,
   IngestChunkRequest,
   IngestChunkResponse,
   IngestDocumentRequest,
@@ -417,15 +412,15 @@ export class MindGraph {
   }
 
   async getEmbedding(uid: string): Promise<unknown> {
-    return this.get(`/embeddings/${uid}`);
+    return this.get(`/node/${uid}/embedding`);
   }
 
   async setEmbedding(uid: string, vector: number[]): Promise<void> {
-    await this.request("PUT", `/embeddings/${uid}`, { vector });
+    await this.request("PUT", `/node/${uid}/embedding`, { vector });
   }
 
   async deleteEmbedding(uid: string): Promise<void> {
-    await this.del(`/embeddings/${uid}`);
+    await this.del(`/node/${uid}/embedding`);
   }
 
   // ---- Entity resolution ----
@@ -500,7 +495,7 @@ export class MindGraph {
     edge_types?: string[];
     weight_threshold?: number;
   }): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
-    return this.post("/subgraph", { uid, ...opts });
+    return this.post("/subgraph", { start_uids: [uid], ...opts });
   }
 
   // ---- Lifecycle shortcuts ----
@@ -590,29 +585,4 @@ export class MindGraph {
     return this.post("/clear", {});
   }
 
-  // ---- Management (Cloud only) ----
-
-  async signup(email: string, password: string): Promise<unknown> {
-    return this.post("/v1/auth/signup", { email, password });
-  }
-
-  async login(email: string, password: string): Promise<unknown> {
-    return this.post("/v1/auth/login", { email, password });
-  }
-
-  async createApiKey(name = "default"): Promise<ApiKeyResponse> {
-    return this.post("/v1/api-keys", { name });
-  }
-
-  async listApiKeys(): Promise<{ api_keys: unknown[] }> {
-    return this.get("/v1/api-keys");
-  }
-
-  async revokeApiKey(id: string): Promise<void> {
-    await this.del(`/v1/api-keys/${id}`);
-  }
-
-  async getUsage(): Promise<unknown> {
-    return this.get("/v1/usage");
-  }
 }
