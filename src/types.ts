@@ -324,6 +324,8 @@ export interface IngestDocumentRequest {
   content: string;
   title?: string;
   document_type?: string;
+  /** Semantic content type: "article" (default), "meeting_notes", "journal". Drives default extraction layers. */
+  content_type?: string;
   source_uri?: string;
   chunk_size?: number;
   chunk_overlap?: number;
