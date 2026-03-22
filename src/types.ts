@@ -260,6 +260,10 @@ export interface ExecutionRequest {
 }
 
 export interface RetrieveRequest {
+  /**
+   * Retrieval action. Note: `"semantic"` requires a configured embedding
+   * provider on the server; for semantic search use `retrieveContext()` instead.
+   */
   action: "text" | "semantic" | "hybrid" | "active_goals" | "open_questions" | "weak_claims" | "pending_approvals" | "unresolved_contradictions" | "layer" | "recent";
   query?: string;
   k?: number;

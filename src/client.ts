@@ -138,6 +138,38 @@ export class MindGraph {
     });
   }
 
+  /**
+   * Resolve text to an existing entity via alias matching.
+   * Returns `{ uid: string | null }`.
+   */
+  async resolveEntity(
+    text: string,
+    agentId?: string,
+  ): Promise<{ uid: string | null }> {
+    return this.post("/reality/entity", {
+      action: "resolve",
+      text,
+      agent_id: agentId,
+    });
+  }
+
+  /**
+   * Fuzzy-match text against existing entities.
+   * Returns `{ matches: [{ uid, label, score }] }`.
+   */
+  async fuzzyResolveEntity(
+    text: string,
+    limit = 5,
+    agentId?: string,
+  ): Promise<{ matches: { uid: string; label: string; score: number }[] }> {
+    return this.post("/reality/entity", {
+      action: "fuzzy_resolve",
+      text,
+      limit,
+      agent_id: agentId,
+    });
+  }
+
   // ---- Epistemic Layer ----
 
   async argue(req: ArgumentRequest): Promise<unknown> {
@@ -160,6 +192,49 @@ export class MindGraph {
 
   async deliberate(req: DeliberationRequest): Promise<unknown> {
     return this.post("/intent/deliberation", req);
+  }
+
+  /** Open a new decision for deliberation. Returns the Decision node. */
+  async openDecision(
+    label: string,
+    opts?: { summary?: string; props?: Record<string, unknown>; agent_id?: string },
+  ): Promise<unknown> {
+    return this.post("/intent/deliberation", {
+      action: "open_decision",
+      label,
+      ...opts,
+    });
+  }
+
+  /** Add an option to an open decision. Returns the Option node. */
+  async addOption(
+    decisionUid: string,
+    label: string,
+    opts?: { summary?: string; props?: Record<string, unknown>; agent_id?: string },
+  ): Promise<unknown> {
+    return this.post("/intent/deliberation", {
+      action: "add_option",
+      decision_uid: decisionUid,
+      label,
+      ...opts,
+    });
+  }
+
+  /**
+   * Resolve a decision by choosing an option.
+   * `chosenOptionUid` must be the uid of an option added via `addOption()`.
+   */
+  async resolveDecision(
+    decisionUid: string,
+    chosenOptionUid: string,
+    opts?: { summary?: string; agent_id?: string },
+  ): Promise<unknown> {
+    return this.post("/intent/deliberation", {
+      action: "resolve",
+      decision_uid: decisionUid,
+      chosen_option_uid: chosenOptionUid,
+      ...opts,
+    });
   }
 
   // ---- Action Layer ----
@@ -222,7 +297,8 @@ export class MindGraph {
 
   // ---- Cross-cutting ----
 
-  async retrieve(req: RetrieveRequest): Promise<unknown> {
+  /** Returns an array of results. Shape varies by action. */
+  async retrieve(req: RetrieveRequest): Promise<unknown[]> {
     return this.post("/retrieve", req);
   }
 
@@ -240,13 +316,24 @@ export class MindGraph {
     return this.get(`/node/${uid}`);
   }
 
+  /**
+   * Create a node via the low-level CRUD endpoint.
+   *
+   * The server requires `props._type` to determine the node variant.
+   * If `node_type` is provided and `_type` is not already in `props`,
+   * it is injected automatically.
+   */
   async addNode(body: {
     label: string;
     node_type?: string;
     props?: Record<string, unknown>;
     agent_id?: string;
   }): Promise<GraphNode> {
-    return this.post("/node", body);
+    const props: Record<string, unknown> = { ...body.props };
+    if (body.node_type && !("_type" in props)) {
+      props._type = body.node_type;
+    }
+    return this.post("/node", { ...body, props });
   }
 
   async updateNode(
@@ -285,6 +372,13 @@ export class MindGraph {
     return this.post("/link", body);
   }
 
+  /**
+   * Create an edge via the low-level CRUD endpoint.
+   *
+   * The server requires `props._type` to determine the edge variant.
+   * If `edge_type` is provided and `_type` is not already in `props`,
+   * it is injected automatically.
+   */
   async addEdge(body: {
     from_uid: string;
     to_uid: string;
@@ -293,7 +387,11 @@ export class MindGraph {
     props?: Record<string, unknown>;
     agent_id?: string;
   }): Promise<unknown> {
-    return this.post("/edge", body);
+    const props: Record<string, unknown> = { ...body.props };
+    if (body.edge_type && !("_type" in props)) {
+      props._type = body.edge_type;
+    }
+    return this.post("/edge", { ...body, props });
   }
 
   async updateEdge(uid: string, body: {
@@ -312,10 +410,18 @@ export class MindGraph {
     return this.get(`/edge/${uid}/history`);
   }
 
+  /**
+   * List edges filtered by source and/or target node.
+   * At least one of `from_uid` or `to_uid` is **required** —
+   * the server returns 400 if neither is provided.
+   */
   async getEdges(params: {
     from_uid?: string;
     to_uid?: string;
   }): Promise<GraphEdge[]> {
+    if (!params.from_uid && !params.to_uid) {
+      throw new Error("at least one of from_uid or to_uid is required");
+    }
     const qs = new URLSearchParams();
     if (params.from_uid) qs.set("from_uid", params.from_uid);
     if (params.to_uid) qs.set("to_uid", params.to_uid);
