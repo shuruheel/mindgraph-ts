@@ -335,6 +335,16 @@ export interface IngestDocumentRequest {
   chunk_overlap?: number;
   layers?: string[];
   agent_id?: string;
+  /** Paper metadata */
+  authors?: string[];
+  abstract_text?: string;
+  doi?: string;
+  publication_date?: string;
+  journal?: string;
+  keywords?: string[];
+  citation_count?: number;
+  arxiv_id?: string;
+  language?: string;
 }
 
 export interface IngestDocumentResponse {

@@ -489,6 +489,16 @@ export class MindGraph {
     return this.post("/batch", req);
   }
 
+  /** Fetch multiple nodes by UID in a single request. */
+  async getNodesBatch(uids: string[]): Promise<GraphNode[]> {
+    return this.post("/nodes/batch", { uids }) as Promise<GraphNode[]>;
+  }
+
+  /** Fetch all edges between a set of node UIDs. */
+  async getEdgesBatch(uids: string[]): Promise<GraphEdge[]> {
+    return this.post("/edges/batch", { uids }) as Promise<GraphEdge[]>;
+  }
+
   // ---- Embeddings ----
 
   async configureEmbeddings(body: {
@@ -677,6 +687,19 @@ export class MindGraph {
 
   async cancelJob(id: string): Promise<unknown> {
     return this.post(`/jobs/${id}/cancel`, {});
+  }
+
+  /** Resume ingestion of a document that has failed chunks. */
+  async resumeDocument(
+    docUid: string,
+    opts?: { layers?: string[]; agent_id?: string },
+  ): Promise<{ job_id: string; document_uid: string; chunks_to_resume: number }> {
+    return this.post(`/ingest/resume/${docUid}`, opts ?? {});
+  }
+
+  /** Delete a document and all its chunks and extracted nodes. */
+  async deleteDocument(uid: string): Promise<unknown> {
+    return this.del(`/ingest/document/${uid}`);
   }
 
   async cleanupOrphans(): Promise<unknown> {
