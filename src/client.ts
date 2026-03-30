@@ -50,6 +50,8 @@ export class MindGraphError extends Error {
 export class MindGraph {
   private baseUrl: string;
   private headers: Record<string, string>;
+  private maxRetries: number;
+  private retryBackoffMs: number;
 
   constructor(config: MindGraphConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
@@ -59,6 +61,8 @@ export class MindGraph {
     } else if (config.jwt) {
       this.headers["Authorization"] = `Bearer ${config.jwt}`;
     }
+    this.maxRetries = config.maxRetries ?? 3;
+    this.retryBackoffMs = config.retryBackoffMs ?? 1000;
   }
 
   // ---- HTTP helpers ----
@@ -72,20 +76,33 @@ export class MindGraph {
     if (body !== undefined) {
       init.body = JSON.stringify(body);
     }
-    const res = await fetch(url, init);
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      let parsed: unknown;
-      try { parsed = JSON.parse(text); } catch { parsed = text; }
-      throw new MindGraphError(
-        `${method} ${path} failed: ${res.status}`,
-        res.status,
-        parsed,
-      );
+
+    let lastError: MindGraphError | undefined;
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      const res = await fetch(url, init);
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        let parsed: unknown;
+        try { parsed = JSON.parse(text); } catch { parsed = text; }
+        const err = new MindGraphError(
+          `${method} ${path} failed: ${res.status}`,
+          res.status,
+          parsed,
+        );
+        // Retry on 503 (server warming up) with exponential backoff
+        if (res.status === 503 && attempt < this.maxRetries) {
+          lastError = err;
+          const delay = this.retryBackoffMs * 2 ** attempt;
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        throw err;
+      }
+      const text = await res.text();
+      if (!text) return undefined as T;
+      return JSON.parse(text) as T;
     }
-    const text = await res.text();
-    if (!text) return undefined as T;
-    return JSON.parse(text) as T;
+    throw lastError!;
   }
 
   private get<T>(path: string): Promise<T> {

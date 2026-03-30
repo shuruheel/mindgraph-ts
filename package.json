@@ -1,6 +1,6 @@
 {
   "name": "mindgraph",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "TypeScript client for the MindGraph Cloud API",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
