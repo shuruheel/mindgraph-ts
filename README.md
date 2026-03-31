@@ -52,7 +52,27 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 |--------|-------------|
 | `capture(req)` | Capture a source, snippet, or observation |
 | `entity(req)` | Create, alias, resolve, or merge entities |
-| `findOrCreateEntity(label, entityType?, agentId?)` | Convenience: create or find an entity by label |
+| `findOrCreateEntity(label, entityType?, agentId?)` | Convenience: create or find an entity by label (generic fallback) |
+| `findOrCreatePerson(label, props?, agentId?)` | Find or create a Person entity |
+| `findOrCreateOrganization(label, props?, agentId?)` | Find or create an Organization entity |
+| `findOrCreateNation(label, props?, agentId?)` | Find or create a Nation entity |
+| `findOrCreateEvent(label, props?, agentId?)` | Find or create an Event entity |
+| `findOrCreatePlace(label, props?, agentId?)` | Find or create a Place entity |
+| `findOrCreateConcept(label, props?, agentId?)` | Find or create a Concept entity |
+| `addClaim(label, props?, agentId?)` | Add a Claim node |
+| `addEvidence(label, props?, agentId?)` | Add an Evidence node |
+| `addObservation(label, props?, agentId?)` | Add an Observation node |
+
+**Typed entity example:**
+
+```typescript
+const person = await graph.findOrCreatePerson("Marie Curie", { nationality: "Polish" });
+const org = await graph.findOrCreateOrganization("CERN", { org_type: "intergovernmental" });
+const concept = await graph.findOrCreateConcept("Nuclear Physics");
+
+// findOrCreateEntity() still works as a generic fallback for any entity type
+const entity = await graph.findOrCreateEntity("Some Entity");
+```
 
 ### Epistemic Layer
 

@@ -155,6 +155,60 @@ export class MindGraph {
     });
   }
 
+  /** Convenience: create or find a Person entity by label. */
+  async findOrCreatePerson(
+    label: string,
+    props?: Record<string, unknown>,
+    agentId?: string,
+  ): Promise<GraphNode & { created: boolean }> {
+    return this.findOrCreateEntity(label, { entity_type: "person", ...props }, agentId);
+  }
+
+  /** Convenience: create or find an Organization entity by label. */
+  async findOrCreateOrganization(
+    label: string,
+    props?: Record<string, unknown>,
+    agentId?: string,
+  ): Promise<GraphNode & { created: boolean }> {
+    return this.findOrCreateEntity(label, { entity_type: "organization", ...props }, agentId);
+  }
+
+  /** Convenience: create or find a Nation entity by label. */
+  async findOrCreateNation(
+    label: string,
+    props?: Record<string, unknown>,
+    agentId?: string,
+  ): Promise<GraphNode & { created: boolean }> {
+    return this.findOrCreateEntity(label, { entity_type: "nation", ...props }, agentId);
+  }
+
+  /** Convenience: create or find an Event entity by label. */
+  async findOrCreateEvent(
+    label: string,
+    props?: Record<string, unknown>,
+    agentId?: string,
+  ): Promise<GraphNode & { created: boolean }> {
+    return this.findOrCreateEntity(label, { entity_type: "event", ...props }, agentId);
+  }
+
+  /** Convenience: create or find a Place entity by label. */
+  async findOrCreatePlace(
+    label: string,
+    props?: Record<string, unknown>,
+    agentId?: string,
+  ): Promise<GraphNode & { created: boolean }> {
+    return this.findOrCreateEntity(label, { entity_type: "place", ...props }, agentId);
+  }
+
+  /** Convenience: create or find a Concept entity by label. */
+  async findOrCreateConcept(
+    label: string,
+    props?: Record<string, unknown>,
+    agentId?: string,
+  ): Promise<GraphNode & { created: boolean }> {
+    return this.findOrCreateEntity(label, { entity_type: "concept", ...props }, agentId);
+  }
+
   /**
    * Resolve text to an existing entity via alias matching.
    * Returns `{ uid: string | null }`.
@@ -199,6 +253,56 @@ export class MindGraph {
 
   async structure(req: StructureRequest): Promise<unknown> {
     return this.post("/epistemic/structure", req);
+  }
+
+  /**
+   * Convenience: create a Claim node via the argument endpoint.
+   * Returns the full argument response including `claim_uid`.
+   */
+  async addClaim(
+    label: string,
+    content: string,
+    confidence?: number,
+    agentId?: string,
+  ): Promise<unknown> {
+    return this.post("/epistemic/argument", {
+      claim: {
+        label,
+        confidence,
+        props: { content },
+      },
+      agent_id: agentId,
+    });
+  }
+
+  /**
+   * Convenience: create an Evidence node attached to a claim via the argument endpoint.
+   * If `claimLabel` and `claimConfidence` are provided, also creates the claim.
+   */
+  async addEvidence(
+    label: string,
+    description: string,
+    agentId?: string,
+  ): Promise<unknown> {
+    return this.post("/epistemic/argument", {
+      claim: { label: `Claim for: ${label}` },
+      evidence: [{ label, props: { description } }],
+      agent_id: agentId,
+    });
+  }
+
+  /** Convenience: create an Observation node via the reality capture endpoint. */
+  async addObservation(
+    label: string,
+    description: string,
+    agentId?: string,
+  ): Promise<unknown> {
+    return this.post("/reality/capture", {
+      action: "observation",
+      label,
+      summary: description,
+      agent_id: agentId,
+    });
   }
 
   // ---- Intent Layer ----

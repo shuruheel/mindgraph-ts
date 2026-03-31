@@ -44,6 +44,63 @@ export interface PathStep {
   parent_uid: string | null;
 }
 
+// ---- Reality layer prop types ----
+
+export interface PersonProps {
+  canonical_name: string;
+  description?: string;
+  birth_date?: string;
+  death_date?: string;
+  nationality?: string;
+  occupation?: string;
+  identifiers?: Record<string, string>;
+  attributes?: Record<string, unknown>;
+}
+
+export interface OrganizationProps {
+  canonical_name: string;
+  description?: string;
+  org_type: string;
+  founded_date?: string;
+  dissolved_date?: string;
+  headquarters?: string;
+  sector?: string;
+  identifiers?: Record<string, string>;
+  attributes?: Record<string, unknown>;
+}
+
+export interface NationProps {
+  canonical_name: string;
+  description?: string;
+  iso_code?: string;
+  capital?: string;
+  government_type?: string;
+  region?: string;
+  identifiers?: Record<string, string>;
+  attributes?: Record<string, unknown>;
+}
+
+export interface EventProps {
+  canonical_name: string;
+  description?: string;
+  event_type: string;
+  event_date?: string;
+  end_date?: string;
+  location?: string;
+  identifiers?: Record<string, string>;
+  attributes?: Record<string, unknown>;
+}
+
+export interface PlaceProps {
+  canonical_name: string;
+  description?: string;
+  place_type: string;
+  coordinates?: { lat: number; lon: number };
+  parent_location?: string;
+  identifiers?: Record<string, string>;
+  attributes?: Record<string, unknown>;
+}
+
 // ---- Request types ----
 
 export interface CaptureRequest {
