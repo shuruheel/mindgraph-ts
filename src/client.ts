@@ -474,6 +474,43 @@ export class MindGraph {
     await this.del(`/node/${uid}`);
   }
 
+  async batchDeleteNodes(params: {
+    uids?: string[];
+    agentId?: string;
+    filter?: {
+      nodeType?: string;
+      nodeTypes?: string[];
+      layer?: string;
+      labelContains?: string;
+      propEquals?: [string, string];
+    };
+    reason?: string;
+    by?: string;
+    hardPurge?: boolean;
+  }): Promise<{
+    nodes_tombstoned: number;
+    edges_tombstoned: number;
+    nodes_purged: number;
+    edges_purged: number;
+  }> {
+    const body: Record<string, unknown> = {};
+    if (params.uids) body.uids = params.uids;
+    if (params.agentId) body.agent_id = params.agentId;
+    if (params.filter) {
+      body.filter = {
+        node_type: params.filter.nodeType,
+        node_types: params.filter.nodeTypes,
+        layer: params.filter.layer,
+        label_contains: params.filter.labelContains,
+        prop_equals: params.filter.propEquals,
+      };
+    }
+    if (params.reason) body.reason = params.reason;
+    if (params.by) body.by = params.by;
+    if (params.hardPurge) body.hard_purge = params.hardPurge;
+    return this.post("/nodes/delete", body);
+  }
+
   async getNodeHistory(uid: string): Promise<unknown[]> {
     return this.get(`/node/${uid}/history`);
   }
