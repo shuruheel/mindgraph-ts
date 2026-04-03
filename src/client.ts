@@ -3,6 +3,7 @@ import type {
   GraphNode,
   GraphEdge,
   SearchResult,
+  EnrichedSearchResponse,
   PathStep,
   CaptureRequest,
   EntityRequest,
@@ -604,7 +605,10 @@ export class MindGraph {
     node_type?: string;
     layer?: string;
     limit?: number;
-  }): Promise<SearchResult[]> {
+    min_score?: number;
+    include_edges?: boolean;
+    include_chunks?: boolean;
+  }): Promise<SearchResult[] | EnrichedSearchResponse> {
     return this.post("/search", { query, ...opts });
   }
 

@@ -35,6 +35,20 @@ export interface SearchResult {
   score: number;
 }
 
+export interface SearchChunk {
+  chunk_uid: string;
+  content: string;
+  document_uid: string | null;
+  document_title: string | null;
+  chunk_index: number | null;
+}
+
+export interface EnrichedSearchResponse {
+  results: SearchResult[];
+  edges: GraphEdge[];
+  chunks: SearchChunk[];
+}
+
 export interface PathStep {
   uid: string;
   label: string;

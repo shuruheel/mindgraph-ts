@@ -4,6 +4,8 @@ export type {
   GraphNode,
   GraphEdge,
   SearchResult,
+  SearchChunk,
+  EnrichedSearchResponse,
   PathStep,
   PersonProps,
   OrganizationProps,
