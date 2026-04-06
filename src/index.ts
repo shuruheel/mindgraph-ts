@@ -42,4 +42,6 @@ export type {
   BatchRequest,
   DecayRequest,
   PurgeRequest,
+  ArticleResult,
+  ListArticlesResponse,
 } from "./types.js";

@@ -35,6 +35,7 @@ import type {
   BatchRequest,
   DecayRequest,
   PurgeRequest,
+  ListArticlesResponse,
 } from "./types.js";
 
 export class MindGraphError extends Error {
@@ -874,6 +875,59 @@ export class MindGraph {
 
   async clearGraph(): Promise<ClearResponse> {
     return this.post("/clear", {});
+  }
+
+  // ── Wiki ──────────────────────────────────────────────────────────────
+
+  /** List wiki articles with optional filters. */
+  async listArticles(params?: {
+    article_type?: string;
+    covers_node_type?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ListArticlesResponse> {
+    const q = new URLSearchParams();
+    if (params?.article_type) q.set("article_type", params.article_type);
+    if (params?.covers_node_type) q.set("covers_node_type", params.covers_node_type);
+    if (params?.search) q.set("search", params.search);
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.offset) q.set("offset", String(params.offset));
+    return this.get(`/wiki/articles?${q}`);
+  }
+
+  /** Get a single wiki article by UID. */
+  async getArticle(uid: string): Promise<GraphNode> {
+    return this.get(`/wiki/article/${uid}`);
+  }
+
+  /** Find the article that covers or summarizes a given entity/document UID. */
+  async getArticleBySubject(subjectUid: string): Promise<GraphNode | null> {
+    try {
+      return await this.get(`/wiki/article/by-subject/${subjectUid}`);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Update an article's markdown content (user editing). */
+  async updateArticle(uid: string, content: string): Promise<GraphNode> {
+    return this.patch(`/wiki/article/${uid}`, { content });
+  }
+
+  /** Trigger wiki compilation for a specific document. */
+  async compileDocument(docUid: string): Promise<{ job_id?: string; status: string }> {
+    return this.post(`/wiki/compile/${docUid}`, {});
+  }
+
+  /** Trigger wiki compilation for a specific entity. */
+  async compileEntity(entityUid: string): Promise<{ job_id: string }> {
+    return this.post(`/wiki/compile/entity/${entityUid}`, {});
+  }
+
+  /** Backfill: compile articles for all documents and eligible entities. */
+  async compileAll(): Promise<{ job_id: string }> {
+    return this.post("/wiki/compile/all", {});
   }
 
 }

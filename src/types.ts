@@ -444,7 +444,24 @@ export interface RetrieveContextRequest {
   min_similarity?: number;
 }
 
+export interface ArticleResult {
+  uid: string;
+  label: string;
+  content: string;
+  article_type: string;
+  covers_uid: string | null;
+  questions: string[] | null;
+  score: number;
+}
+
+export interface ListArticlesResponse {
+  articles: GraphNode[];
+  total: number;
+  has_more: boolean;
+}
+
 export interface RetrieveContextResponse {
+  articles?: ArticleResult[];
   chunks: {
     chunk_uid: string;
     content: string;
