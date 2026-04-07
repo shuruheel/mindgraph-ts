@@ -435,11 +435,14 @@ export interface IngestSessionRequest {
 
 export interface RetrieveContextRequest {
   query: string;
-  k?: number;
-  depth?: number;
+  /** Max graph nodes to return (default 10). */
+  node_limit?: number;
+  /** Max wiki articles to return (default 3). Set to 0 to skip. */
+  article_limit?: number;
+  /** Max raw chunks to return (default 0). Set > 0 to include source text. */
+  chunk_limit?: number;
   node_types?: string[];
   layer?: string;
-  include_chunks?: boolean;
   include_graph?: boolean;
   min_similarity?: number;
 }
@@ -462,15 +465,18 @@ export interface ListArticlesResponse {
 
 export interface RetrieveContextResponse {
   articles?: ArticleResult[];
-  chunks: {
+  chunks?: {
     chunk_uid: string;
     content: string;
     score: number;
     document_uid: string | null;
+    document_title: string | null;
     chunk_index: number | null;
   }[];
   graph: {
-    nodes: Record<string, unknown>[];
+    nodes: (Record<string, unknown> & {
+      source_documents?: { uid: string; title: string }[];
+    })[];
     edges: Record<string, unknown>[];
   };
 }

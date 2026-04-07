@@ -840,6 +840,11 @@ export class MindGraph {
     return this.post("/retrieve/context", req);
   }
 
+  /** Backfill node_source provenance for existing graphs. */
+  async backfillNodeSources(): Promise<{ documents_processed: number; node_source_pairs_added: number }> {
+    return this.post("/backfill/node-sources", {});
+  }
+
   async listJobs(): Promise<Job[]> {
     return this.get("/jobs");
   }
