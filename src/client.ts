@@ -63,6 +63,9 @@ export class MindGraph {
     } else if (config.jwt) {
       this.headers["Authorization"] = `Bearer ${config.jwt}`;
     }
+    if (config.orgId) {
+      this.headers["X-MindGraph-Org"] = config.orgId;
+    }
     this.maxRetries = config.maxRetries ?? 3;
     this.retryBackoffMs = config.retryBackoffMs ?? 1000;
   }

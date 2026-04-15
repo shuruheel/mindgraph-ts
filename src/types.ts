@@ -536,6 +536,7 @@ export interface MindGraphConfig {
   baseUrl: string;
   apiKey?: string;
   jwt?: string;
+  orgId?: string;
   /** Max retries for 503 (server warming up) responses. Default: 3. Set to 0 to disable. */
   maxRetries?: number;
   /** Initial backoff in ms before first retry. Doubles each attempt. Default: 1000. */
