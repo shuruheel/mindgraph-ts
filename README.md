@@ -113,6 +113,23 @@ const entity = await graph.findOrCreateEntity("Some Entity");
 | `governance(req)` | Create policies, set safety budgets, request/resolve approvals |
 | `execution(req)` | Track execution lifecycle and register agents |
 
+### Synthesis (Projects)
+
+Scope a corpus to a `Project` (via `commit({ action: "project", ... })` then link documents with `PartOfProject`), then mine cross-document signals and generate synthesis articles.
+
+| Method | Description |
+|--------|-------------|
+| `signals(projectUid, opts?)` | Mine cross-document structural signals for a project (entity bridges, claim hubs, theory gaps, concept clusters, analogies, dialectical pairs) |
+| `runSynthesis(projectUid)` | Spawn an async synthesis job that turns top clusters into Article nodes; returns a `job_id` to poll via `getJob()` |
+
+```typescript
+const project = await graph.commit({ action: "project", label: "Q2 China strategy" });
+// ...link documents to the project via PartOfProject edges...
+const signals = await graph.signals(project.uid, { signals: "clustered_claim_hubs,dialectical_pairs" });
+const { job_id } = await graph.runSynthesis(project.uid);
+const job = await graph.getJob(job_id);
+```
+
 ### CRUD
 
 | Method | Description |

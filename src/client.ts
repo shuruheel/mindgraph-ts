@@ -36,6 +36,9 @@ import type {
   DecayRequest,
   PurgeRequest,
   ListArticlesResponse,
+  SignalsQuery,
+  SignalsResponse,
+  SynthesisJobResponse,
 } from "./types.js";
 
 export class MindGraphError extends Error {
@@ -936,6 +939,39 @@ export class MindGraph {
   /** Backfill: compile articles for all documents and eligible entities. */
   async compileAll(): Promise<{ job_id: string }> {
     return this.post("/wiki/compile/all", {});
+  }
+
+  // ── Synthesis (Projects) ──────────────────────────────────────────────
+
+  /**
+   * Mine structural synthesis signals for a project's document corpus.
+   *
+   * Returns candidate surface for downstream synthesis — entity bridges
+   * across documents, claim hubs, clustered claim hubs, theory support
+   * gaps, concept clusters, analogy candidates, and dialectical pairs.
+   *
+   * Blocking operation. No LLM calls; Datalog + embedding clustering only.
+   */
+  async signals(
+    projectUid: string,
+    opts?: SignalsQuery,
+  ): Promise<SignalsResponse> {
+    const q = new URLSearchParams();
+    if (opts?.signals) q.set("signals", opts.signals);
+    if (opts?.target_types) q.set("target_types", opts.target_types);
+    const qs = q.toString();
+    return this.get(`/synthesis/signals/${projectUid}${qs ? `?${qs}` : ""}`);
+  }
+
+  /**
+   * Spawn a background synthesis job for a project: mines signals,
+   * selects top idea clusters, runs LLM synthesis, and persists
+   * candidate Article nodes linked via `Covers` edges.
+   *
+   * Returns a `job_id` immediately; poll `getJob(id)` for progress.
+   */
+  async runSynthesis(projectUid: string): Promise<SynthesisJobResponse> {
+    return this.post(`/synthesis/run/${projectUid}`, {});
   }
 
 }

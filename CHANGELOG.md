@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 (2026-04-16)
+
+### Synthesis (Projects)
+
+Scoped-corpus synthesis: mine cross-document signals for a `Project` and turn top idea clusters into Article nodes via a background job.
+
+- `signals(projectUid, opts?)` — `GET /synthesis/signals/{project_uid}`. Returns entity bridges, claim hubs, ranked/clustered claim hubs, theory support gaps, concept clusters, analogy candidates, and dialectical pairs. Filterable by signal subset and target node types.
+- `runSynthesis(projectUid)` — `POST /synthesis/run/{project_uid}`. Spawns a background synthesis job and returns `{ job_id }`; poll with `getJob()`.
+
+### New Types
+
+`SignalsQuery`, `SignalsResponse`, `SynthesisJobResponse`, `DocumentRef`, `EntityBridge`, `ClaimHub`, `RankedClaimHub`, `ClusteredClaimHub`, `ClusterClaimSample`, `EpistemicCounts`, `TheorySupportGap`, `ConceptCluster`, `AnalogyCandidate`, `DialecticalPair`.
+
 ## 0.2.0 (2026-03-30)
 
 ### New Entity Types

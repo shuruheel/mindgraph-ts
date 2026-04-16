@@ -530,6 +530,131 @@ export interface PurgeRequest {
   before?: number;
 }
 
+// ---- Synthesis (Projects) ----
+
+export interface SignalsQuery {
+  /**
+   * Comma-separated subset of signal names to compute, e.g.
+   * `"documents,entity_bridges,claim_hubs"`. If omitted, all signals run.
+   */
+  signals?: string;
+  /**
+   * Comma-separated node types used as filters for `entity_bridges` and
+   * `claim_hubs`. Defaults to the server's built-in target set
+   * (Person, Organization, Nation, Event, Place, Theory, Hypothesis,
+   * Pattern, Mechanism, Model, Analogy).
+   */
+  target_types?: string;
+}
+
+export interface DocumentRef {
+  uid: string;
+  label: string;
+}
+
+export interface EntityBridge {
+  uid: string;
+  label: string;
+  node_type: string;
+  doc_count: number;
+}
+
+export interface ClaimHub {
+  target_uid: string;
+  target_label: string;
+  target_type: string;
+  claim_count: number;
+}
+
+export interface RankedClaimHub {
+  target_uid: string;
+  target_label: string;
+  target_type: string;
+  claim_count: number;
+  distinct_doc_count: number;
+  project_doc_count: number;
+  dialectical_count: number;
+  score: number;
+  breadth_score: number;
+  tension_score: number;
+  density_score: number;
+}
+
+export interface ClusterClaimSample {
+  uid: string;
+  label: string;
+  source_doc_label: string;
+}
+
+export interface EpistemicCounts {
+  evidence: number;
+  arguments: number;
+  warrants: number;
+  theories_hypotheses: number;
+  contradicts_edges: number;
+}
+
+export interface ClusteredClaimHub {
+  cluster_id: number;
+  size: number;
+  distinct_doc_count: number;
+  project_doc_count: number;
+  cohesion_score: number;
+  epistemic_density: number;
+  score: number;
+  breadth_score: number;
+  size_score: number;
+  dominant_entity_uid: string | null;
+  dominant_entity_label: string | null;
+  dominant_entity_type: string | null;
+  sample_claims: ClusterClaimSample[];
+  epistemic_counts: EpistemicCounts;
+}
+
+export interface TheorySupportGap {
+  uid: string;
+  label: string;
+  node_type: string;
+  support_count: number;
+}
+
+export interface ConceptCluster {
+  uid: string;
+  label: string;
+  doc_count: number;
+}
+
+export interface AnalogyCandidate {
+  uid: string;
+  label: string;
+  summary: string;
+}
+
+export interface DialecticalPair {
+  edge_type: string;
+  from_uid: string;
+  from_label: string;
+  to_uid: string;
+  to_label: string;
+}
+
+export interface SignalsResponse {
+  project_uid: string;
+  documents: DocumentRef[];
+  entity_bridges: EntityBridge[];
+  claim_hubs: ClaimHub[];
+  ranked_claim_hubs: RankedClaimHub[];
+  clustered_claim_hubs: ClusteredClaimHub[];
+  theory_support_gaps: TheorySupportGap[];
+  concept_clusters: ConceptCluster[];
+  analogy_candidates: AnalogyCandidate[];
+  dialectical_pairs: DialecticalPair[];
+}
+
+export interface SynthesisJobResponse {
+  job_id: string;
+}
+
 // ---- Config ----
 
 export interface MindGraphConfig {
