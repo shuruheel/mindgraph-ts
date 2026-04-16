@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1 (2026-04-16)
+
+### Docs
+
+- README: correct `addClaim` / `addEvidence` / `addObservation` signatures and `findOrCreateEntity` parameter name to match `src/client.ts`.
+- README: remove Management (Cloud only) section — those methods were never part of the SDK. Account sign-up, login, and API key management live in the [MindGraph dashboard](https://mindgraph.cloud/dashboard).
+
+No code changes in this release.
+
 ## 0.4.0 (2026-04-16)
 
 ### Synthesis (Projects)

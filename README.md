@@ -52,16 +52,16 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 |--------|-------------|
 | `capture(req)` | Capture a source, snippet, or observation |
 | `entity(req)` | Create, alias, resolve, or merge entities |
-| `findOrCreateEntity(label, entityType?, agentId?)` | Convenience: create or find an entity by label (generic fallback) |
+| `findOrCreateEntity(label, props?, agentId?)` | Convenience: create or find an entity by label (generic fallback) |
 | `findOrCreatePerson(label, props?, agentId?)` | Find or create a Person entity |
 | `findOrCreateOrganization(label, props?, agentId?)` | Find or create an Organization entity |
 | `findOrCreateNation(label, props?, agentId?)` | Find or create a Nation entity |
 | `findOrCreateEvent(label, props?, agentId?)` | Find or create an Event entity |
 | `findOrCreatePlace(label, props?, agentId?)` | Find or create a Place entity |
 | `findOrCreateConcept(label, props?, agentId?)` | Find or create a Concept entity |
-| `addClaim(label, props?, agentId?)` | Add a Claim node |
-| `addEvidence(label, props?, agentId?)` | Add an Evidence node |
-| `addObservation(label, props?, agentId?)` | Add an Observation node |
+| `addClaim(label, content, confidence?, agentId?)` | Add a Claim node via the argument endpoint |
+| `addEvidence(label, description, agentId?)` | Add an Evidence node attached to a claim |
+| `addObservation(label, description, agentId?)` | Add an Observation node |
 
 **Typed entity example:**
 
@@ -188,16 +188,7 @@ const job = await graph.getJob(job_id);
 | `health()` | Health check |
 | `stats()` | Graph-wide statistics |
 
-### Management (Cloud only)
-
-| Method | Description |
-|--------|-------------|
-| `signup(email, password)` | Create a new account |
-| `login(email, password)` | Login and receive JWT |
-| `createApiKey(name?)` | Create an API key |
-| `listApiKeys()` | List all API keys |
-| `revokeApiKey(id)` | Revoke an API key |
-| `getUsage()` | Get usage statistics |
+> Account sign-up, login, and API key management live in the [MindGraph dashboard](https://mindgraph.cloud/dashboard) — not the SDK. Get your API key there, then pass it to the `MindGraph` constructor.
 
 ## Examples
 
