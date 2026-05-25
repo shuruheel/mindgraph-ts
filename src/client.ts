@@ -39,6 +39,23 @@ import type {
   SignalsQuery,
   SignalsResponse,
   SynthesisJobResponse,
+  // Ontology layer
+  OntologySchema,
+  OntologySchemaDetail,
+  OntologyObjectType,
+  OntologyObjectTypeInput,
+  OntologyRelationType,
+  OntologyRelationTypeInput,
+  CreateOntologySchemaRequest,
+  UpdateOntologySchemaRequest,
+  ProposeOntologySchemaRequest,
+  OntologyProposal,
+  ProposalEdits,
+  OntologyQueryRequest,
+  OntologyQueryResponse,
+  LinkDomainObjectsRequest,
+  ExtractOntologyRequest,
+  DomainObject,
 } from "./types.js";
 
 export class MindGraphError extends Error {
@@ -972,6 +989,257 @@ export class MindGraph {
    */
   async runSynthesis(projectUid: string): Promise<SynthesisJobResponse> {
     return this.post(`/synthesis/run/${projectUid}`, {});
+  }
+
+  // ============================================================================
+  // Operational Ontology Layer (Layer 7)
+  // ============================================================================
+
+  // ---- Schema management (cloud Postgres) ----
+
+  async listOntologySchemas(): Promise<{ items: OntologySchema[] }> {
+    return this.get("/v1/ontology/schemas");
+  }
+
+  async getOntologySchema(id: string): Promise<OntologySchemaDetail> {
+    return this.get(`/v1/ontology/schemas/${id}`);
+  }
+
+  async createOntologySchema(
+    req: CreateOntologySchemaRequest,
+  ): Promise<OntologySchema> {
+    return this.post("/v1/ontology/schemas", req);
+  }
+
+  async updateOntologySchema(
+    id: string,
+    req: UpdateOntologySchemaRequest,
+  ): Promise<OntologySchema> {
+    return this.patch(`/v1/ontology/schemas/${id}`, req);
+  }
+
+  async activateOntologySchema(id: string): Promise<OntologySchema> {
+    return this.post(`/v1/ontology/schemas/${id}/activate`, {});
+  }
+
+  async deprecateOntologySchema(id: string): Promise<OntologySchema> {
+    return this.post(`/v1/ontology/schemas/${id}/deprecate`, {});
+  }
+
+  async archiveOntologySchema(id: string): Promise<OntologySchema> {
+    return this.del(`/v1/ontology/schemas/${id}`);
+  }
+
+  /**
+   * Kick off an LLM-driven schema proposal job.
+   * Returns immediately with `{ schema_id, job_id }`; poll
+   * `getOntologySchema(schema_id)` for streaming progress.
+   */
+  async proposeOntologySchema(
+    req: ProposeOntologySchemaRequest,
+  ): Promise<{ schema_id: string; job_id: string }> {
+    return this.post("/v1/ontology/propose-schema", req);
+  }
+
+  async testOntologySchema(
+    id: string,
+    opts?: { example_queries?: string[] },
+  ): Promise<{ job_id: string }> {
+    return this.post(`/v1/ontology/schemas/${id}/test`, opts ?? {});
+  }
+
+  // ---- Schema sub-resources ----
+
+  async addOntologyObjectType(
+    schemaId: string,
+    req: OntologyObjectTypeInput,
+  ): Promise<OntologyObjectType> {
+    return this.post(`/v1/ontology/schemas/${schemaId}/object-types`, req);
+  }
+
+  async updateOntologyObjectType(
+    schemaId: string,
+    typeId: string,
+    req: Partial<OntologyObjectTypeInput>,
+  ): Promise<OntologyObjectType> {
+    return this.patch(
+      `/v1/ontology/schemas/${schemaId}/object-types/${typeId}`,
+      req,
+    );
+  }
+
+  async deleteOntologyObjectType(
+    schemaId: string,
+    typeId: string,
+  ): Promise<OntologyObjectType> {
+    return this.del(
+      `/v1/ontology/schemas/${schemaId}/object-types/${typeId}`,
+    );
+  }
+
+  async addOntologyRelationType(
+    schemaId: string,
+    req: OntologyRelationTypeInput,
+  ): Promise<OntologyRelationType> {
+    return this.post(`/v1/ontology/schemas/${schemaId}/relation-types`, req);
+  }
+
+  async updateOntologyRelationType(
+    schemaId: string,
+    typeId: string,
+    req: Partial<OntologyRelationTypeInput>,
+  ): Promise<OntologyRelationType> {
+    return this.patch(
+      `/v1/ontology/schemas/${schemaId}/relation-types/${typeId}`,
+      req,
+    );
+  }
+
+  async deleteOntologyRelationType(
+    schemaId: string,
+    typeId: string,
+  ): Promise<OntologyRelationType> {
+    return this.del(
+      `/v1/ontology/schemas/${schemaId}/relation-types/${typeId}`,
+    );
+  }
+
+  // ---- Proposals ----
+
+  async listOntologyProposals(opts?: {
+    status?: string;
+    schema_id?: string;
+    object_type?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ items: OntologyProposal[]; limit: number; offset: number }> {
+    const q = new URLSearchParams();
+    if (opts?.status) q.set("status", opts.status);
+    if (opts?.schema_id) q.set("schema_id", opts.schema_id);
+    if (opts?.object_type) q.set("object_type", opts.object_type);
+    if (opts?.limit != null) q.set("limit", String(opts.limit));
+    if (opts?.offset != null) q.set("offset", String(opts.offset));
+    const qs = q.toString();
+    return this.get(`/v1/ontology/proposals${qs ? `?${qs}` : ""}`);
+  }
+
+  async getOntologyProposal(id: string): Promise<OntologyProposal> {
+    return this.get(`/v1/ontology/proposals/${id}`);
+  }
+
+  async patchOntologyProposal(
+    id: string,
+    req: { edits: ProposalEdits },
+  ): Promise<OntologyProposal> {
+    return this.patch(`/v1/ontology/proposals/${id}`, req);
+  }
+
+  async approveOntologyProposal(
+    id: string,
+    opts?: { feedback?: string; edits?: ProposalEdits },
+  ): Promise<OntologyProposal> {
+    return this.post(`/v1/ontology/proposals/${id}/approve`, opts ?? {});
+  }
+
+  async rejectOntologyProposal(
+    id: string,
+    reason?: string,
+  ): Promise<OntologyProposal> {
+    return this.post(`/v1/ontology/proposals/${id}/reject`, { reason });
+  }
+
+  async applyOntologyProposal(
+    id: string,
+  ): Promise<{ id: string; queued: boolean }> {
+    return this.post(`/v1/ontology/proposals/${id}/apply`, {});
+  }
+
+  async batchApproveOntologyProposals(
+    ids: string[],
+    feedback?: string,
+  ): Promise<{ processed: string[]; skipped: { id: string; reason: string }[] }> {
+    return this.post("/v1/ontology/proposals/batch-approve", { ids, feedback });
+  }
+
+  async batchRejectOntologyProposals(
+    ids: string[],
+    reason?: string,
+  ): Promise<{ processed: string[]; skipped: { id: string; reason: string }[] }> {
+    return this.post("/v1/ontology/proposals/batch-reject", { ids, reason });
+  }
+
+  // ---- Retrieval (graph server) ----
+
+  async queryOntology(req: OntologyQueryRequest): Promise<OntologyQueryResponse> {
+    return this.post("/ontology/query", req);
+  }
+
+  async getDomainObject(uid: string): Promise<DomainObject> {
+    return this.get(`/ontology/object/${uid}`);
+  }
+
+  async getDomainObjectContext(
+    uid: string,
+    depth?: number,
+  ): Promise<OntologyQueryResponse> {
+    const qs = depth != null ? `?depth=${depth}` : "";
+    return this.get(`/ontology/object/${uid}/context${qs}`);
+  }
+
+  async getDomainObjectHistory(
+    uid: string,
+  ): Promise<{
+    versions: Array<{
+      version: number;
+      changed_at: string;
+      changed_by: string;
+      change_reason?: string;
+      snapshot: unknown;
+    }>;
+  }> {
+    return this.get(`/ontology/object/${uid}/history`);
+  }
+
+  async listDomainObjects(opts: {
+    schema_id: string;
+    object_type?: string;
+    limit?: number;
+    offset?: number;
+    sort?: string;
+  }): Promise<{
+    items: DomainObject[];
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  }> {
+    const q = new URLSearchParams();
+    q.set("schema_id", opts.schema_id);
+    if (opts.object_type) q.set("object_type", opts.object_type);
+    if (opts.limit != null) q.set("limit", String(opts.limit));
+    if (opts.offset != null) q.set("offset", String(opts.offset));
+    if (opts.sort) q.set("sort", opts.sort);
+    return this.get(`/ontology/objects?${q.toString()}`);
+  }
+
+  async searchDomainObjects(
+    query: string,
+    opts?: { schema_id?: string; object_types?: string[]; limit?: number },
+  ): Promise<{ items: Array<{ object: DomainObject; score: number }> }> {
+    return this.post("/ontology/objects/search", { query, ...(opts ?? {}) });
+  }
+
+  async linkDomainObjects(
+    req: LinkDomainObjectsRequest,
+  ): Promise<{ edge_uid: string }> {
+    return this.post("/ontology/relation", { action: "create", ...req });
+  }
+
+  // ---- Extraction ----
+
+  async extractOntology(
+    req: ExtractOntologyRequest,
+  ): Promise<{ job_id: string }> {
+    return this.post("/ontology/extract", req);
   }
 
 }

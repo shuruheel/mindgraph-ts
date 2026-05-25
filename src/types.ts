@@ -667,3 +667,220 @@ export interface MindGraphConfig {
   /** Initial backoff in ms before first retry. Doubles each attempt. Default: 1000. */
   retryBackoffMs?: number;
 }
+
+// ============================================================================
+// Operational Ontology Layer (Layer 7)
+// ============================================================================
+
+/** Field schema entry inside `OntologyObjectType.fields_json`. */
+export interface FieldDefinition {
+  name: string;
+  /** One of: string|number|integer|boolean|date|datetime|enum|reference|array|object|json */
+  type: string;
+  required?: boolean;
+  description?: string;
+  default?: unknown;
+  enum?: string[];
+  reference_object_type?: string;
+  array_item_type?: string;
+  extraction_hint?: string;
+}
+
+export interface OntologySchema {
+  id: string;
+  org_id: string;
+  name: string;
+  description?: string;
+  status: "draft" | "active" | "deprecated" | "archived";
+  version: number;
+  propose_status?: "pending" | "running" | "ready" | "failed" | null;
+  propose_job_id?: string | null;
+  propose_error?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  activated_at?: string | null;
+  archived_at?: string | null;
+}
+
+export interface OntologyObjectType {
+  id: string;
+  schema_id: string;
+  org_id: string;
+  name: string;
+  display_name?: string | null;
+  description?: string | null;
+  fields_json: FieldDefinition[];
+  required_fields: string[];
+  identity_fields: string[];
+  aliases: string[];
+  examples_json: Record<string, unknown>[];
+  extraction_hints?: string | null;
+  default_confidence: number;
+  review_policy: "always" | "low_confidence" | "never";
+  status: "active" | "deprecated" | "archived";
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OntologyRelationType {
+  id: string;
+  schema_id: string;
+  org_id: string;
+  name: string;
+  display_name?: string | null;
+  description?: string | null;
+  source_type: string;
+  target_type: string;
+  cardinality?: "one_to_one" | "one_to_many" | "many_to_many" | null;
+  symmetric: boolean;
+  transitive: boolean;
+  inverse_relation_type?: string | null;
+  fields_json: FieldDefinition[];
+  extraction_hints?: string | null;
+  review_policy: "always" | "low_confidence" | "never";
+  status: "active" | "deprecated" | "archived";
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OntologySchemaDetail extends OntologySchema {
+  object_types: OntologyObjectType[];
+  relation_types: OntologyRelationType[];
+}
+
+export interface CreateOntologySchemaRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateOntologySchemaRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface OntologyObjectTypeInput {
+  name: string;
+  display_name?: string;
+  description?: string;
+  fields?: FieldDefinition[];
+  required_fields?: string[];
+  identity_fields?: string[];
+  aliases?: string[];
+  examples?: Record<string, unknown>[];
+  extraction_hints?: string;
+  default_confidence?: number;
+  review_policy?: "always" | "low_confidence" | "never";
+}
+
+export interface OntologyRelationTypeInput {
+  name: string;
+  display_name?: string;
+  description?: string;
+  source_type: string;
+  target_type: string;
+  cardinality?: "one_to_one" | "one_to_many" | "many_to_many";
+  symmetric?: boolean;
+  transitive?: boolean;
+  inverse_relation_type?: string;
+  fields?: FieldDefinition[];
+  extraction_hints?: string;
+  review_policy?: "always" | "low_confidence" | "never";
+}
+
+/** Status: pending | approved | approval_required | rejected | applied | apply_failed. */
+export interface OntologyProposal {
+  id: string;
+  org_id: string;
+  schema_id: string;
+  proposal_type: string;
+  proposed_by_agent_id?: string | null;
+  source_uids: string[];
+  source_scope_ids: string[];
+  changes_json: {
+    adds: Array<Record<string, unknown>>;
+    updates: Array<Record<string, unknown>>;
+    removes: Array<Record<string, unknown>>;
+  };
+  rationale?: string | null;
+  confidence?: number | null;
+  risk_level?: string | null;
+  review_status: string;
+  approval_uid?: string | null;
+  proposed_node_uid?: string | null;
+  applied_job_id?: string | null;
+  applied_error?: string | null;
+  apply_attempt_count: number;
+  edited_by?: string | null;
+  edited_at?: string | null;
+  original_snapshot?: Record<string, unknown> | null;
+  requires_manual_resolution: boolean;
+  created_at: string;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+}
+
+export interface ProposalEdits {
+  canonical_name?: string;
+  fields?: Record<string, unknown>;
+  aliases?: string[];
+}
+
+export interface ProposeOntologySchemaRequest {
+  description?: string;
+  template_hint?:
+    | "client_services"
+    | "healthcare"
+    | "supply_chain"
+    | "research_intel"
+    | "custom";
+  source_uids?: string[];
+  source_documents?: Array<{ content: string; title?: string }>;
+  target_use_case?: string;
+  example_objects?: string[];
+  example_queries?: string[];
+  desired_workflows?: string[];
+  parent_schema_id?: string;
+}
+
+export interface OntologyQueryRequest {
+  query: string;
+  schema_id: string;
+  object_types?: string[];
+  include_cognitive_context?: boolean;
+  include_sources?: boolean;
+  depth?: number;
+  limit?: number;
+}
+
+export interface OntologyQueryResponse {
+  objects: GraphNode[];
+  relations: GraphEdge[];
+  cognitive_context: Record<string, GraphNode[]>;
+  external_refs: unknown[];
+  graph: { nodes: GraphNode[]; edges: GraphEdge[] };
+  provenance: Array<{ node_uid: string; source_uid: string; text_span: string }>;
+  confidence: { overall: number };
+  truncated?: Record<string, boolean>;
+}
+
+export interface LinkDomainObjectsRequest {
+  from_uid: string;
+  to_uid: string;
+  relation_type: string;
+  fields?: Record<string, unknown>;
+  confidence?: number;
+  agent_id?: string;
+}
+
+export interface ExtractOntologyRequest {
+  ontology_schema_id: string;
+  source_uids: string[];
+  mode?: "propose_only" | "respect_policies" | "force_auto_apply";
+}
+
+export type DomainObject = GraphNode;
+export type DomainRelation = GraphEdge;
