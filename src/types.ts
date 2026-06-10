@@ -52,6 +52,22 @@ export interface LegContribution {
   score: number;
 }
 
+/** A suspected duplicate pair awaiting human review (pending PossibleDuplicate edge). */
+export interface MergeCandidate {
+  edge_uid: string;
+  node_a_uid: string;
+  node_a_label: string;
+  node_a_summary: string;
+  node_b_uid: string;
+  node_b_label: string;
+  node_b_summary: string;
+  node_type: string;
+  /** Similarity score that triggered the candidate (e.g. cosine), if known. */
+  similarity: number | null;
+  /** How the candidate was found: "exact" | "fuzzy" | "semantic" | "llm". */
+  method: string | null;
+}
+
 /** A `/retrieve` hybrid result: the full node plus the fused RRF score. */
 export interface HybridSearchResult {
   node: GraphNode;

@@ -4,6 +4,7 @@ import type {
   GraphEdge,
   SearchResult,
   HybridSearchResult,
+  MergeCandidate,
   EnrichedSearchResponse,
   PathStep,
   CaptureRequest,
@@ -845,6 +846,15 @@ export class MindGraph {
 
   async getContradictions(): Promise<unknown[]> {
     return this.get("/contradictions");
+  }
+
+  /**
+   * Pending merge candidates: suspected duplicate pairs recorded by the dedup
+   * pipeline's ambiguous zone as PossibleDuplicate edges, awaiting a human
+   * merge/dismiss decision (server >= 1.3).
+   */
+  async getMergeCandidates(): Promise<MergeCandidate[]> {
+    return this.post("/retrieve", { action: "merge_candidates" });
   }
 
   async getPendingApprovals(): Promise<GraphNode[]> {
