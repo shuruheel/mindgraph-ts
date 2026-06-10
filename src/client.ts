@@ -3,6 +3,7 @@ import type {
   GraphNode,
   GraphEdge,
   SearchResult,
+  HybridSearchResult,
   EnrichedSearchResponse,
   PathStep,
   CaptureRequest,
@@ -636,12 +637,17 @@ export class MindGraph {
     return this.post("/search", { query, ...opts });
   }
 
-  /** Hybrid BM25 + vector search with reciprocal rank fusion. */
+  /**
+   * Hybrid BM25 + vector search with reciprocal rank fusion. Pass
+   * `explain: true` to get per-leg contributions (`legs`) on each result —
+   * the "why retrieved" detail (server ≥ 1.2.0; older servers ignore it).
+   */
   async hybridSearch(query: string, opts?: {
     k?: number;
     node_types?: string[];
     layer?: string;
-  }): Promise<SearchResult[]> {
+    explain?: boolean;
+  }): Promise<HybridSearchResult[]> {
     return this.post("/retrieve", {
       action: "hybrid",
       query,

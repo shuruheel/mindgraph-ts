@@ -35,6 +35,31 @@ export interface SearchResult {
   score: number;
 }
 
+/**
+ * One retrieval leg's contribution to a fused hybrid result — the
+ * "why retrieved" detail. The fused score reconstructs exactly as
+ * `Σ 1/(60 + rank)` over a result's legs.
+ */
+export interface LegContribution {
+  /** Which leg surfaced the result: `"fts"` (keyword/BM25) or `"vec"` (vector). */
+  leg: string;
+  /** 1-based within-leg rank the fusion used. */
+  rank: number;
+  /**
+   * The leg's raw score (BM25 relevance for `fts`, cosine similarity for
+   * `vec`). Not comparable across legs — RRF fuses by rank, not score.
+   */
+  score: number;
+}
+
+/** A `/retrieve` hybrid result: the full node plus the fused RRF score. */
+export interface HybridSearchResult {
+  node: GraphNode;
+  score: number;
+  /** Per-leg contributions; present only when the request set `explain: true`. */
+  legs?: LegContribution[];
+}
+
 export interface SearchChunk {
   chunk_uid: string;
   content: string;
@@ -345,6 +370,12 @@ export interface RetrieveRequest {
   salience_min?: number;
   limit?: number;
   offset?: number;
+  /**
+   * Hybrid action only: attach per-leg contributions (`legs`) to each
+   * result — the "why retrieved" detail. Requires server ≥ 1.2.0; older
+   * servers ignore the field.
+   */
+  explain?: boolean;
 }
 
 export interface TraverseRequest {
