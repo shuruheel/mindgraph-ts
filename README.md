@@ -146,7 +146,8 @@ const job = await graph.getJob(job_id);
 | Method | Description |
 |--------|-------------|
 | `search(query, { node_type?, layer?, limit? })` | Full-text search |
-| `hybridSearch(query, { k?, node_types?, layer? })` | BM25 + vector search with rank fusion |
+| `hybridSearch(query, { k?, node_types?, layer?, explain? })` | BM25 + vector search with rank fusion; `explain: true` attaches per-leg contributions (`legs`: which legs surfaced each result, the within-leg rank the fusion used, and the leg's raw score) |
+| `getMergeCandidates()` | Pending duplicate pairs recorded by the dedup pipeline, awaiting merge/dismiss |
 
 ### Traversal
 
