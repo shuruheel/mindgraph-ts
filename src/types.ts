@@ -376,7 +376,17 @@ export interface RetrieveRequest {
    * Retrieval action. Note: `"semantic"` requires a configured embedding
    * provider on the server; for semantic search use `retrieveContext()` instead.
    */
-  action: "text" | "semantic" | "hybrid" | "active_goals" | "open_questions" | "weak_claims" | "pending_approvals" | "unresolved_contradictions" | "layer" | "recent";
+  action: "text" | "semantic" | "hybrid" | "active_goals" | "open_questions" | "weak_claims" | "pending_approvals" | "unresolved_contradictions" | "preferences" | "layer" | "recent";
+  /**
+   * Required for `"text"`, `"semantic"`, `"hybrid"`. Optional for
+   * `"preferences"`: with a `query` you get topic-relevant preferences (the
+   * semantic leg bridges low lexical overlap — e.g. "suggest a hotel"
+   * surfaces a stored "loved the rooftop pool"); without one you get all
+   * preferences, most salient first. Either way the result is a
+   * `SearchResult[]` (score = relevance with a query, salience without).
+   * Use `"preferences"` for advice/recommendation requests so answers
+   * reflect what the user likes.
+   */
   query?: string;
   k?: number;
   threshold?: number;
@@ -392,6 +402,16 @@ export interface RetrieveRequest {
    * servers ignore the field.
    */
   explain?: boolean;
+  /**
+   * `recent` action only: restrict to nodes created at/after this unix
+   * timestamp (seconds). Filters by INGESTION time, not event time.
+   */
+  created_after?: number;
+  /**
+   * `recent` action only: restrict to nodes created at/before this unix
+   * timestamp (seconds). Filters by INGESTION time, not event time.
+   */
+  created_before?: number;
 }
 
 export interface TraverseRequest {

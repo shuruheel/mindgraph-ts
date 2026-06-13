@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.0 (2026-06-14)
+
+### Added
+
+- `RetrieveRequest.action` gains `"preferences"`: returns the user's
+  stated/learned preferences (server ≥ 1.4.0). With a `query`, topic-relevant
+  preferences via the semantic leg; without one, all preferences by salience.
+  Either way the result is a `SearchResult[]`. Use it for advice/recommendation
+  requests so answers reflect what the user likes.
+- `RetrieveRequest.created_after` / `created_before` (unix seconds) for the
+  `"recent"` action — an ingestion-time window.
+
+(Changelog note: 0.5.0–0.6.1 were published without changelog entries; this
+file resumes at 0.7.0.)
+
 ## 0.4.1 (2026-04-16)
 
 ### Docs
