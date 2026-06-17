@@ -753,6 +753,71 @@ export interface FieldDefinition {
   extraction_hint?: string;
 }
 
+/**
+ * Datasource binding for an object type — the "semantic contract" mapping it to
+ * an external system (SQL today). Null/absent = extracted or authored.
+ * See docs/plans/layer7-semantic-contract.md §2.
+ */
+export interface ObjectBacking {
+  kind: "sql";
+  /** MDO-ready list; exactly one source is supported today. */
+  sources: SqlBackingSource[];
+  /** Identity key, resolved via an indexed source_pk at sync time. */
+  primary_key: string;
+  title_field?: string;
+  sync?: BackingSync;
+}
+
+export interface SqlBackingSource {
+  /** FK into external_connections — credentials live in secrets, never here. */
+  connection_ref: string;
+  table: string;
+  /** Join/identity key within this source. */
+  key: string;
+  filter?: BackingFilter;
+  /** object field name -> binding. Each field is owned by exactly one source. */
+  field_map: Record<string, FieldBinding>;
+}
+
+export interface FieldBinding {
+  column: string;
+  /** indexed = projected/embedded/searchable; live = fetched on demand, never stored. */
+  mode?: "indexed" | "live";
+}
+
+/** Structured predicate (column op value) — never raw SQL. */
+export interface BackingFilter {
+  column: string;
+  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "in" | "like" | "is_null" | "not_null";
+  value?: unknown;
+}
+
+export interface BackingSync {
+  mode?: "incremental" | "full";
+  cursor_column?: string;
+  deleted_at_column?: string;
+  /** null = manual "Sync now"; cron later. */
+  schedule?: string | null;
+}
+
+/** Datasource binding for a relation type (FK column or M:M join table). */
+export type RelationBacking =
+  | {
+      kind: "sql_fk";
+      connection_ref: string;
+      fk_table: string;
+      fk_column: string;
+      /** `table.column` the FK references (the other side's PK). */
+      references: string;
+    }
+  | {
+      kind: "sql_join_table";
+      connection_ref: string;
+      table: string;
+      from_column: string;
+      to_column: string;
+    };
+
 export interface OntologySchema {
   id: string;
   org_id: string;
@@ -786,6 +851,8 @@ export interface OntologyObjectType {
   extraction_hints?: string | null;
   default_confidence: number;
   review_policy: "always" | "low_confidence" | "never";
+  /** Datasource binding (null = extracted/authored). */
+  backing?: ObjectBacking | null;
   status: "active" | "deprecated" | "archived";
   version: number;
   created_at: string;
@@ -808,6 +875,8 @@ export interface OntologyRelationType {
   fields_json: FieldDefinition[];
   extraction_hints?: string | null;
   review_policy: "always" | "low_confidence" | "never";
+  /** Datasource binding (null = extracted/authored). */
+  backing?: RelationBacking | null;
   status: "active" | "deprecated" | "archived";
   version: number;
   created_at: string;
@@ -841,6 +910,8 @@ export interface OntologyObjectTypeInput {
   extraction_hints?: string;
   default_confidence?: number;
   review_policy?: "always" | "low_confidence" | "never";
+  /** Bind this object type to an external source (SQL). Omit for extracted/authored. */
+  backing?: ObjectBacking | null;
 }
 
 export interface OntologyRelationTypeInput {
@@ -856,6 +927,8 @@ export interface OntologyRelationTypeInput {
   fields?: FieldDefinition[];
   extraction_hints?: string;
   review_policy?: "always" | "low_confidence" | "never";
+  /** Bind this relation to an FK column or M:M join table. Both endpoints must be sql-mapped. */
+  backing?: RelationBacking | null;
 }
 
 /** Status: pending | approved | approval_required | rejected | applied | apply_failed. */
