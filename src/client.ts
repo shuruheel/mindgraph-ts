@@ -55,6 +55,7 @@ import type {
   ProposalEdits,
   OntologyQueryRequest,
   OntologyQueryResponse,
+  OntologyToolDescriptor,
   LinkDomainObjectsRequest,
   ExtractOntologyRequest,
   DomainObject,
@@ -1188,6 +1189,16 @@ export class MindGraph {
 
   async queryOntology(req: OntologyQueryRequest): Promise<OntologyQueryResponse> {
     return this.post("/ontology/query", req);
+  }
+
+  /**
+   * Read-only agent tool descriptors generated from the active ontology
+   * schema(s). Each maps to a generic `/ontology` read endpoint with
+   * `object_type` bound. Used by the MCP server to expose typed per-object
+   * tools (`search_customers`, `summarize_customer`, …).
+   */
+  async listOntologyTools(): Promise<{ tools: OntologyToolDescriptor[] }> {
+    return this.get("/v1/ontology/tools");
   }
 
   async getDomainObject(uid: string): Promise<DomainObject> {

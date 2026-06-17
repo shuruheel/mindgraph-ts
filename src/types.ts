@@ -888,6 +888,17 @@ export interface OntologySchemaDetail extends OntologySchema {
   relation_types: OntologyRelationType[];
 }
 
+/** A generated read-only tool descriptor (from `listOntologyTools`). */
+export interface OntologyToolDescriptor {
+  name: string;
+  description: string;
+  schema_id: string;
+  object_type: string;
+  /** "search" | "object" | "object_context" */
+  maps_to: string;
+  input_schema: Record<string, unknown>;
+}
+
 export interface CreateOntologySchemaRequest {
   name: string;
   description?: string;
