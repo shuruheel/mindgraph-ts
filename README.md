@@ -130,6 +130,27 @@ const { job_id } = await graph.runSynthesis(project.uid);
 const job = await graph.getJob(job_id);
 ```
 
+### Operational Ontology (Layer 7)
+
+Define typed domain objects (Customer, Order, Contract…) as a semantic contract and either **bind them to a SQL database** or extract them from documents — fused onto one object. Connecting a database (credentials/sync) is done in the dashboard; the SDK proposes/reviews schemas, queries, and lists the generated agent read tools.
+
+| Method | Description |
+|--------|-------------|
+| `proposeOntologySchema(req)` | Draft a schema from a description (+ optional sample docs); returns `{ schema_id, job_id }` |
+| `activateOntologySchema(id)` / `getOntologySchema(id)` / `listOntologySchemas()` | Schema lifecycle |
+| `listOntologyProposals(opts?)` / `approveOntologyProposal(id)` / `rejectOntologyProposal(id)` | Review extracted-object proposals |
+| `queryOntology({ query, include_cognitive_context })` | Typed retrieval with the cognitive overlay fused in |
+| `listOntologyTools()` | The generated read-tool manifest (`search_/get_/summarize_<obj>`) the MCP server renders |
+
+```typescript
+const { schema_id } = await graph.proposeOntologySchema({ description: "Clients, orders, contracts." });
+await graph.activateOntologySchema(schema_id);
+const { tools } = await graph.listOntologyTools();
+const ctx = await graph.queryOntology({ query: "Which customers are a churn risk?", include_cognitive_context: true });
+```
+
+See the [Operational Ontology](https://mindgraph.cloud/docs/ontology) and [Connect a database](https://mindgraph.cloud/docs/connect) docs.
+
 ### CRUD
 
 | Method | Description |
