@@ -1,0 +1,34 @@
+name: CI
+
+# Offline gate: lint + build + the offline mocked-transport conformance tests.
+# The live, prod-mutating integration suite (src/integration.test.ts) is gated
+# behind MINDGRAPH_E2E=1 and SKIPS here, so this runs with no secrets and no
+# network. Its job is to make SDK<->server contract drift visible on every PR.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install
+
+      - name: Lint (tsc --noEmit)
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test (offline; live E2E skipped without MINDGRAPH_E2E=1)
+        run: npm run test

@@ -2,15 +2,26 @@
  * Comprehensive integration tests for the MindGraph TypeScript SDK.
  * Tests every public method against the live Cloud API.
  *
- * Run: API_KEY=mg_live_... bun test src/integration.test.ts
+ * ⚠️ LIVE + PROD-MUTATING. These tests create/tombstone real nodes in the org
+ * the API key belongs to. They are GATED OFF by default so `npm run test`
+ * (offline) is safe and runs in CI without secrets.
+ *
+ * To run, BOTH must be set (opt-in):
+ *   MINDGRAPH_E2E=1 API_KEY=mg_live_... npx vitest run src/integration.test.ts
+ *
+ * Point BASE_URL at a dedicated test org, never prod-with-real-data. The
+ * dedicated e2e GitHub workflow (.github/workflows/e2e.yml, workflow_dispatch
+ * only) wires a test-org key from a secret.
  */
 import { describe, test, expect, beforeAll } from "vitest";
 import { MindGraph } from "./client.js";
 
 const API_KEY = process.env.API_KEY ?? process.env.MINDGRAPH_API_KEY ?? "";
 const BASE_URL = process.env.BASE_URL ?? "https://api.mindgraph.cloud";
+/** Live E2E is opt-in only: requires the explicit gate AND an API key. */
+const E2E_ENABLED = process.env.MINDGRAPH_E2E === "1" && !!API_KEY;
 
-describe.skipIf(!API_KEY)("MindGraph SDK Integration Tests", () => {
+describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
   let mg: MindGraph;
 
   // UIDs collected during the test run

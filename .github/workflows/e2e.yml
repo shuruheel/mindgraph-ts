@@ -1,0 +1,42 @@
+name: Live E2E (manual)
+
+# ⚠️ MUTATES A LIVE ORG. This runs src/integration.test.ts against the real
+# Cloud API, creating and tombstoning real nodes. It is workflow_dispatch ONLY
+# (never on push/PR) and MUST target a DEDICATED TEST ORG — never prod with
+# real customer data.
+#
+# Wiring:
+#   - MINDGRAPH_TEST_ORG_API_KEY  (repo secret): an mg_... key for a throwaway
+#     test org. Do NOT use a production org key here.
+#   - MINDGRAPH_E2E=1 + API_KEY are what un-gate the integration suite (see the
+#     describe.skipIf in src/integration.test.ts).
+#   - BASE_URL optionally overrides the endpoint (default api.mindgraph.cloud).
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'API base URL (defaults to https://api.mindgraph.cloud)'
+        required: false
+        default: 'https://api.mindgraph.cloud'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install
+
+      - name: Live integration tests (mutates the dedicated test org)
+        run: npm run test:e2e
+        env:
+          MINDGRAPH_E2E: '1'
+          API_KEY: ${{ secrets.MINDGRAPH_TEST_ORG_API_KEY }}
+          BASE_URL: ${{ github.event.inputs.base_url }}
