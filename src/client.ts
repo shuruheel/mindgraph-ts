@@ -885,6 +885,11 @@ export class MindGraph {
     return this.post("/backfill/node-sources", {});
   }
 
+  /** Backfill citation anchors (source_chunks spans) for existing graphs. Returns a background job id. */
+  async backfillAnchors(): Promise<{ job_id: string }> {
+    return this.post("/backfill/anchors", {});
+  }
+
   async listJobs(): Promise<Job[]> {
     return this.get("/jobs");
   }

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.0 (2026-06-29)
+
+### Added
+
+- **Citation provenance on retrieval.** `RetrieveContextResponse` graph nodes now
+  carry `source_chunks` (`SourceChunk[]`): per source chunk, `char_start`/`char_end`
+  (UTF-8 byte offsets), `page_start`/`page_end`, the matched `quote`, and a structured
+  `anchor` (`TextSelector`). New exported types `SourceChunk` and `TextSelector`.
+- **Belief stance.** Claim nodes may carry `believed_by` (`BelievedBy[]`): the
+  per-agent assertion stance (`agent_uid`, `agent_label`, `confidence`). New exported
+  type `BelievedBy`.
+- **Document ingestion** gains optional `page_offsets` (`PageOffset[]`), `page_count`,
+  `mime_type`, and `force_reingest`; `IngestDocumentResponse` gains `deduplicated`
+  (identical content reuses the existing Document). New exported type `PageOffset`
+  (`char_start` is a UTF-8 **byte** offset).
+- `backfillAnchors()` — kick off the `/backfill/anchors` job (populate
+  `ExtractedFrom.location` selectors for pre-existing edges). Server ≥ 1.5.0.
+
 ## 0.7.0 (2026-06-14)
 
 ### Added

@@ -443,6 +443,17 @@ export interface EvolveRequest {
 
 // ---- Ingestion types ----
 
+/**
+ * Maps a 1-based page number to the **UTF-8 byte offset** where that page begins
+ * in `content`. `char_start` is a byte offset, NOT a codepoint count — count
+ * UTF-8 bytes (`new TextEncoder().encode(s).length`), not `s.length`, or pages
+ * will be wrong for any non-ASCII document.
+ */
+export interface PageOffset {
+  page: number;
+  char_start: number;
+}
+
 export interface IngestChunkRequest {
   content: string;
   chunk_type?: string;
@@ -483,11 +494,21 @@ export interface IngestDocumentRequest {
   citation_count?: number;
   arxiv_id?: string;
   language?: string;
+  /** Per-page character offsets into `content`, used to map extractions back to source pages. */
+  page_offsets?: PageOffset[];
+  /** Total number of pages in the source document. */
+  page_count?: number;
+  /** MIME type of the original source (e.g. "application/pdf"). */
+  mime_type?: string;
+  /** Re-ingest even if a document with the same content was already ingested. */
+  force_reingest?: boolean;
 }
 
 export interface IngestDocumentResponse {
   job_id: string;
   document_uid: string;
+  /** True when the document was recognized as a duplicate and ingestion was skipped. */
+  deduplicated?: boolean;
 }
 
 export interface IngestSessionRequest {
@@ -530,6 +551,50 @@ export interface ListArticlesResponse {
   has_more: boolean;
 }
 
+/**
+ * Citation provenance for a graph node: the source chunk span(s) the node was
+ * extracted from. Annotated onto retrieve-context graph nodes via `source_chunks`.
+ */
+export interface SourceChunk {
+  chunk_uid: string;
+  /** UTF-8 byte offset into the chunk where the source span starts. */
+  char_start: number | null;
+  /** UTF-8 byte offset into the chunk where the source span ends. */
+  char_end: number | null;
+  /** 1-based page number where the span starts (null if no page map). */
+  page_start: number | null;
+  /** 1-based page number where the span ends (null if no page map). */
+  page_end: number | null;
+  /** The verbatim source span (when matched), else null. */
+  quote: string | null;
+  /**
+   * Web-Annotation-style selector object pinning the node to its source span,
+   * or null when no confident match. `start`/`end` are chunk-relative UTF-8 byte
+   * offsets; `exact` is the durable quote; `prefix`/`suffix` give re-anchoring context.
+   */
+  anchor: TextSelector | null;
+}
+
+/** A Web-Annotation quote+position selector (see `SourceChunk.anchor`). */
+export interface TextSelector {
+  exact: string;
+  prefix: string;
+  suffix: string;
+  start: number;
+  end: number;
+}
+
+/**
+ * Per-agent stance on a Claim: which agent asserts it and with what certainty.
+ * Annotated onto retrieve-context graph nodes (Claim nodes) via `believed_by`.
+ */
+export interface BelievedBy {
+  agent_uid: string;
+  agent_label: string;
+  /** The asserting agent's certainty in the claim, or null if unspecified. */
+  confidence: number | null;
+}
+
 export interface RetrieveContextResponse {
   articles?: ArticleResult[];
   chunks?: {
@@ -543,6 +608,8 @@ export interface RetrieveContextResponse {
   graph: {
     nodes: (Record<string, unknown> & {
       source_documents?: { uid: string; title: string }[];
+      source_chunks?: SourceChunk[];
+      believed_by?: BelievedBy[];
     })[];
     edges: Record<string, unknown>[];
   };
