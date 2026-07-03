@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0 (2026-07-03)
+
+### Added
+
+- `PathStep.path_cost` / `PathStep.path_confidence` (optional; server ≥ mindgraph
+  1.6.0): min-plus cost (Σ −ln(edge weight)) and product of edge confidences of
+  the returned BFS traversal path — a ranking signal for traverse results; they
+  score the path returned, not the best possible path.
+
+### Fixed
+
+- `PathStep.uid` → `node_uid`. The server has always serialized `node_uid`; the
+  declared type was wrong, so reads of `.uid` returned `undefined` at runtime.
+  Type-level breaking, runtime-aligned.
+
 ## 0.8.0 (2026-06-29)
 
 ### Added

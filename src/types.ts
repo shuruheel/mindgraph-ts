@@ -91,12 +91,20 @@ export interface EnrichedSearchResponse {
 }
 
 export interface PathStep {
-  uid: string;
+  node_uid: string;
   label: string;
   node_type: string;
   edge_type: string | null;
   depth: number;
   parent_uid: string | null;
+  /** Min-plus cost of the returned BFS path from the start node
+   * (sum of -ln(weight), weights clamped to (1e-9, 1]); cost of the path
+   * the traversal returned, not the cheapest path. 0 at the start node. */
+  path_cost?: number;
+  /** Product of edge confidences along the returned BFS path (clamped to
+   * (1e-9, 1]); a ranking signal, not a calibrated probability. 1 at the
+   * start node. */
+  path_confidence?: number;
 }
 
 // ---- Reality layer prop types ----
