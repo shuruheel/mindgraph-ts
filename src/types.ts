@@ -573,6 +573,11 @@ export interface RetrieveContextRequest {
   layer?: string;
   include_graph?: boolean;
   min_similarity?: number;
+  /**
+   * M3 as-of (valid time): ISO-8601 date to judge validity windows against.
+   * Windowed nodes then carry `valid_at_time` instead of `currently_valid`.
+   */
+  valid_at?: string;
 }
 
 export interface ArticleResult {
@@ -660,6 +665,8 @@ export interface RetrieveContextResponse {
        * not false.
        */
       currently_valid?: boolean;
+      /** As-of variant of `currently_valid` when the request set `valid_at`. */
+      valid_at_time?: boolean;
     })[];
     edges: Record<string, unknown>[];
   };
