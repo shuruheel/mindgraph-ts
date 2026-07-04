@@ -455,13 +455,29 @@ export interface RetrieveRequest {
 }
 
 export interface TraverseRequest {
-  action: "chain" | "neighborhood" | "path" | "subgraph";
+  action: "chain" | "neighborhood" | "path" | "subgraph" | "top_k_paths";
   start_uid: string;
   end_uid?: string;
   max_depth?: number;
   direction?: "outgoing" | "incoming" | "both";
   edge_types?: string[];
   weight_threshold?: number;
+  /** `top_k_paths` only: number of cheapest paths to return (default 3, cap 25). */
+  k?: number;
+  /** `top_k_paths` only: max edges per path (default 8, cap 16). */
+  max_hops?: number;
+  /** `top_k_paths` only: prune paths whose min-plus cost exceeds this. */
+  max_cost?: number;
+}
+
+/** One result of the `top_k_paths` traverse action: the true k-cheapest
+ * min-plus paths (engine `min_cost_k` semiring aggregation in recursion —
+ * the optimum, unlike PathStep's first-discovery BFS scores). */
+export interface ScoredPath {
+  node_uids: string[];
+  labels: string[];
+  /** Σ −ln(weight) along the path; lower = stronger evidence chain. */
+  cost: number;
 }
 
 export interface EvolveRequest {
