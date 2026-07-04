@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.10.0 (2026-07-04)
+
+### Added
+
+- `ClaimProps` interface: the valid-time window (`valid_from`/`valid_until`),
+  the contradiction operands (`polarity`/`modality`/`quantification`,
+  `subject`/`predicate`/`object`), and the server-computed `canonical_key`
+  (server >= mindgraph 1.7.0).
+- Retrieve-context graph nodes typed with `superseded`/`superseded_by`,
+  `currently_valid`, and the as-of variant `valid_at_time`;
+  `RetrieveContextRequest.valid_at` (ISO date) selects the as-of reference.
+- `exportProvenance(documentUid)` - document-scoped PROV-O / CiTO /
+  W3C Web Annotation JSON-LD (`GET /export/prov`).
+- `traverse` action `"top_k_paths"` with `k`/`max_hops`/`max_cost` request
+  fields and the `ScoredPath` result type - the true k-cheapest min-plus
+  paths (engine `min_cost_k`), unlike `PathStep`'s first-discovery scores.
+
+
 ## 0.9.0 (2026-07-03)
 
 ### Added
