@@ -765,6 +765,19 @@ export class MindGraph {
     return this.get("/export");
   }
 
+  /**
+   * Export one document's extraction provenance as JSON-LD: PROV-O
+   * entities/agents, CiTO relations between extracted claims, and the
+   * citation anchors as W3C Web Annotations (TextQuoteSelector +
+   * TextPositionSelector; positions are chunk-relative UTF-8 byte offsets,
+   * flagged via `mg:offsetUnit`).
+   */
+  async exportProvenance(documentUid: string): Promise<unknown> {
+    return this.get(
+      `/export/prov?document_uid=${encodeURIComponent(documentUid)}`,
+    );
+  }
+
   async importGraph(data: unknown): Promise<unknown> {
     return this.post("/import", data);
   }
