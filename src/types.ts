@@ -164,6 +164,38 @@ export interface PlaceProps {
   attributes?: Record<string, unknown>;
 }
 
+// ---- Epistemic layer prop types ----
+
+export interface ClaimProps {
+  content: string;
+  claim_type?: string;
+  certainty_degree?: number;
+  truth_status?: string;
+  scope?: string;
+  quantitative_value?: number;
+  unit?: string;
+  uncertainty_range?: string;
+  /** When the claimed event occurred (ISO 8601, may be imprecise, e.g. "2026-03"). */
+  event_date?: string;
+  /** Start of the interval over which the claim holds true in the world (ISO 8601). Absent = unbounded/unknown. */
+  valid_from?: string;
+  /** End of the interval over which the claim holds true (ISO 8601). Absent = unbounded/unknown (still valid). */
+  valid_until?: string;
+  /** "affirmative" | "negative" — whether the claim affirms or denies its predicate. */
+  polarity?: string;
+  /** Assertoric strength: "actual" | "necessary" | "likely" | "possible" | "hypothetical" | "counterfactual" | "other". */
+  modality?: string;
+  /** Quantifier over the subject: "universal" | "most" | "some" | "none" | "singular" | "numeric" | "other". */
+  quantification?: string;
+  /** Structured complement to `content`; present only for claims with one clear subject–predicate shape. */
+  subject?: string;
+  predicate?: string;
+  object?: string;
+  /** Content-addressed proposition identity (server-computed; never set by clients). */
+  canonical_key?: string;
+  source?: string;
+}
+
 // ---- Request types ----
 
 export interface CaptureRequest {
@@ -618,6 +650,16 @@ export interface RetrieveContextResponse {
       source_documents?: { uid: string; title: string }[];
       source_chunks?: SourceChunk[];
       believed_by?: BelievedBy[];
+      /** This node has been replaced by a newer value (Supersedes edge). */
+      superseded?: boolean;
+      /** UID of the node that superseded this one. */
+      superseded_by?: string;
+      /**
+       * Whether the node's valid-time window (`props.valid_from`/`valid_until`)
+       * contains today. Absent when the node carries no window — unknown is
+       * not false.
+       */
+      currently_valid?: boolean;
     })[];
     edges: Record<string, unknown>[];
   };
