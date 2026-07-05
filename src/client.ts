@@ -159,6 +159,23 @@ export class MindGraph {
     return this.get("/stats");
   }
 
+  /**
+   * Schema fill-rate report (measure-first tiering): per live node type,
+   * the exact live count and sampled per-field fill rates; near-empty
+   * fields flagged below 5%. `sample` caps per-type sampling (default
+   * 1000); `layer` restricts (e.g. "epistemic").
+   */
+  async schemaFillStats(params?: {
+    sample?: number;
+    layer?: string;
+  }): Promise<unknown> {
+    const q = new URLSearchParams();
+    if (params?.sample !== undefined) q.set("sample", String(params.sample));
+    if (params?.layer) q.set("layer", params.layer);
+    const qs = q.toString();
+    return this.get(`/stats/schema-fill${qs ? `?${qs}` : ""}`);
+  }
+
   // ---- Reality Layer ----
 
   async capture(req: CaptureRequest): Promise<unknown> {

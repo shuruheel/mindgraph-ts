@@ -13,6 +13,8 @@
   `RetrieveContextRequest.valid_at` (ISO date) selects the as-of reference.
 - `exportProvenance(documentUid)` - document-scoped PROV-O / CiTO /
   W3C Web Annotation JSON-LD (`GET /export/prov`).
+- `schemaFillStats({sample?, layer?})` - per-type live counts + sampled
+  per-field fill rates (`GET /stats/schema-fill`).
 - `traverse` action `"top_k_paths"` with `k`/`max_hops`/`max_cost` request
   fields and the `ScoredPath` result type - the true k-cheapest min-plus
   paths (engine `min_cost_k`), unlike `PathStep`'s first-discovery scores.
