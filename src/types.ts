@@ -27,12 +27,24 @@ export interface GraphEdge {
   tombstone_at: number | null;
 }
 
+/**
+ * A `/retrieve` (text/semantic/hybrid) result. BREAKING (D3): the wire shape is
+ * `{node, score, legs?}` — the previous flat `{uid, label, summary, node_type,
+ * score}` never matched the server. Read fields off `.node` (e.g. `.node.uid`).
+ * With `include_sources: true`, `.node.source_documents` carries provenance.
+ */
 export interface SearchResult {
-  uid: string;
-  label: string;
-  summary: string;
-  node_type: string;
+  node: GraphNode & {
+    source_documents?: Array<{
+      uid: string;
+      title: string;
+      ingested_by_name?: string;
+      occurred_at?: string;
+    }>;
+  };
   score: number;
+  /** Present only when the hybrid search ran with `explain: true`. */
+  legs?: LegContribution[];
 }
 
 /**
@@ -452,6 +464,12 @@ export interface RetrieveRequest {
    * timestamp (seconds). Filters by INGESTION time, not event time.
    */
   created_before?: number;
+  /**
+   * When true (`text`/`semantic`/`hybrid`), annotate each result's `node` with
+   * `source_documents` (`[{uid, title, ingested_by_name?, occurred_at?}]`) —
+   * provenance for citing "which teammate's notes" (D3). Requires server ≥ 1.8.0.
+   */
+  include_sources?: boolean;
 }
 
 export interface TraverseRequest {
@@ -510,6 +528,17 @@ export interface PageOffset {
   char_start: number;
 }
 
+/**
+ * A named participant in a conversation/transcript. Supplied at ingest so
+ * extraction can map generic speaker labels ("Interviewer:") to real people
+ * and attribute claims/preferences/demands to the named person.
+ */
+export interface Participant {
+  name: string;
+  organization?: string;
+  role?: string;
+}
+
 export interface IngestChunkRequest {
   content: string;
   chunk_type?: string;
@@ -518,6 +547,12 @@ export interface IngestChunkRequest {
   label?: string;
   layers?: string[];
   agent_id?: string;
+  /**
+   * Optional ontology schema id. When set, the per-chunk ontology extraction
+   * pass runs inline after cognitive extraction and submits proposed domain
+   * objects/relations. Presence alone triggers it.
+   */
+  ontology_schema_id?: string;
 }
 
 export interface IngestChunkResponse {
@@ -558,6 +593,18 @@ export interface IngestDocumentRequest {
   mime_type?: string;
   /** Re-ingest even if a document with the same content was already ingested. */
   force_reingest?: boolean;
+  /**
+   * Optional ontology schema id. When set, the ontology extraction pass runs
+   * after cognitive passes. Presence alone triggers it (no `"ontology"` layer
+   * required), so auto-classified documents still get typed extraction.
+   */
+  ontology_schema_id?: string;
+  /** Named conversation participants — maps speaker labels to real people. */
+  participants?: Participant[];
+  /** When the document/conversation occurred (ISO-8601, imprecision ok). */
+  occurred_at?: string;
+  /** Free-text context grounding attribution during extraction. */
+  context?: string;
 }
 
 export interface IngestDocumentResponse {
@@ -575,6 +622,14 @@ export interface IngestSessionRequest {
   chunk_overlap?: number;
   layers?: string[];
   agent_id?: string;
+  /** Optional ontology schema id — triggers the ontology post-pass over the transcript's chunks. */
+  ontology_schema_id?: string;
+  /** Named conversation participants — maps speaker labels to real people. */
+  participants?: Participant[];
+  /** When the conversation occurred (ISO-8601, imprecision ok). */
+  occurred_at?: string;
+  /** Free-text context grounding attribution during extraction. */
+  context?: string;
 }
 
 export interface RetrieveContextRequest {
@@ -668,7 +723,14 @@ export interface RetrieveContextResponse {
   }[];
   graph: {
     nodes: (Record<string, unknown> & {
-      source_documents?: { uid: string; title: string }[];
+      source_documents?: {
+        uid: string;
+        title: string;
+        /** User id of the teammate who ingested the source document (A4). */
+        ingested_by?: string;
+        /** Display name (else email) of the ingesting teammate. */
+        ingested_by_name?: string;
+      }[];
       source_chunks?: SourceChunk[];
       believed_by?: BelievedBy[];
       /** This node has been replaced by a newer value (Supersedes edge). */
@@ -1165,6 +1227,18 @@ export interface LinkDomainObjectsRequest {
   fields?: Record<string, unknown>;
   confidence?: number;
   agent_id?: string;
+}
+
+export interface CreateDomainObjectRequest {
+  schema_id: string;
+  object_type: string;
+  canonical_name: string;
+  fields?: Record<string, unknown>;
+  aliases?: string[];
+  identity?: Record<string, unknown>;
+  confidence?: number;
+  /** Skip the same-type + same-name duplicate guard (default false). */
+  allow_duplicate?: boolean;
 }
 
 export interface ExtractOntologyRequest {

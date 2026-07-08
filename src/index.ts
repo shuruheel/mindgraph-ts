@@ -35,6 +35,7 @@ export type {
   IngestDocumentRequest,
   IngestDocumentResponse,
   IngestSessionRequest,
+  Participant,
   RetrieveContextRequest,
   RetrieveContextResponse,
   SourceChunk,

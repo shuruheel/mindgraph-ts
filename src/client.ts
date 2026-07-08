@@ -57,6 +57,7 @@ import type {
   OntologyQueryResponse,
   OntologyToolDescriptor,
   LinkDomainObjectsRequest,
+  CreateDomainObjectRequest,
   ExtractOntologyRequest,
   DomainObject,
 } from "./types.js";
@@ -1288,6 +1289,40 @@ export class MindGraph {
     opts?: { schema_id?: string; object_types?: string[]; limit?: number },
   ): Promise<{ items: Array<{ object: DomainObject; score: number }> }> {
     return this.post("/ontology/objects/search", { query, ...(opts ?? {}) });
+  }
+
+  /**
+   * Per-object-type coverage stats for a schema (C2f): field fill rates
+   * (with a `near_empty` flag < 5%) and identity collisions, over a bounded
+   * per-type sample (default 500, max 2000).
+   */
+  async ontologyStats(
+    schemaId: string,
+    sample?: number,
+  ): Promise<{
+    schema_id: string;
+    object_types: Array<{
+      object_type: string;
+      count: number;
+      sampled: boolean;
+      fields: Array<{ name: string; fill_rate: number; near_empty: boolean }>;
+      collisions: Array<{ identity: string; uids: string[] }>;
+    }>;
+  }> {
+    const q = new URLSearchParams({ schema_id: schemaId });
+    if (sample != null) q.set("sample", String(sample));
+    return this.get(`/ontology/stats?${q.toString()}`);
+  }
+
+  /**
+   * Create a domain object by hand (auto-approved). Returns the created node
+   * uid + the audit proposal id. Throws 409 if an object of the same type +
+   * canonical_name already exists, unless `allow_duplicate` is set.
+   */
+  async createDomainObject(
+    req: CreateDomainObjectRequest,
+  ): Promise<{ uid: string; proposal_id: string }> {
+    return this.post("/v1/ontology/objects", req);
   }
 
   async linkDomainObjects(

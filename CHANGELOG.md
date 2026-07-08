@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.11.0 (2026-07-07)
+
+### Added
+
+- Ingest requests carry conversation + ontology metadata: `ontology_schema_id`
+  on document/session/chunk, and `participants` (new `Participant` type),
+  `occurred_at`, `context` on document/session.
+- `createDomainObject(req)` → `POST /v1/ontology/objects` (auto-approved manual
+  object create; 409 on duplicate unless `allow_duplicate`).
+- `ontologyStats(schemaId, sample?)` → `GET /ontology/stats` (per-type field
+  fill rates + `near_empty` flags + identity collisions).
+- `RetrieveRequest.include_sources`: annotate each result's `node` with
+  `source_documents` (`uid`, `title`, `ingested_by_name?`, `occurred_at?`).
+
+### Changed
+
+- **BREAKING (type-only): `SearchResult` corrected to `{ node, score, legs? }`.**
+  The previous flat `{ uid, label, summary, node_type, score }` never matched
+  the `/retrieve` wire shape. Read fields off `.node` (e.g. `.node.uid`); with
+  `include_sources`, `.node.source_documents` carries provenance. No runtime
+  change — only the compile-time shape.
+- `linkDomainObjects` now resolves (`POST /ontology/relation` is registered
+  server-side; it previously 404'd).
+
 ## 0.10.0 (2026-07-04)
 
 ### Added
