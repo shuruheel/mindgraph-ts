@@ -941,6 +941,208 @@ export interface MindGraphConfig {
 // Operational Ontology Layer (Layer 7)
 // ============================================================================
 
+/** Schema-level behavior for compiled semantic-match diagnostics. */
+export type SemanticValidationMode = "off" | "advisory" | "review" | "strict";
+/** Validation modes accepted by the M5.1 schema update endpoint. */
+export type SemanticValidationAuthoringMode = "off" | "advisory";
+
+/** The six storage/runtime behaviors supported by semantic profile v1. */
+export type SemanticRuntimeTemplate =
+  | "entity"
+  | "dependent_entity"
+  | "collective"
+  | "relationship_object"
+  | "event"
+  | "observation";
+
+/** Optional orthogonal classifications that do not introduce storage layouts. */
+export type SemanticModifier = "role" | "phase" | "social_construct";
+
+export type OntologicalBaseKind =
+  | "kind"
+  | "subkind"
+  | "dependent_particular"
+  | "collective"
+  | "relator"
+  | "event"
+  | "quality"
+  | "unspecified";
+
+export type SemanticRigidity = "rigid" | "anti_rigid" | "unspecified";
+export type SemanticIdentityMode = "provided" | "inherited" | "derived" | "unspecified";
+export type SemanticDependence = "independent" | "bearer" | "external" | "unspecified";
+export type SemanticTemporalMode =
+  | "persistent"
+  | "interval"
+  | "occurrence"
+  | "observation_time"
+  | "unspecified";
+export type SemanticMatchStatus = "candidate" | "accepted" | "rejected" | "superseded";
+export type SemanticEvidenceSourceKind =
+  | "corpus_span"
+  | "declared_structure"
+  | "sql_metadata"
+  | "graph_usage"
+  | "human_review"
+  | "llm_classification";
+export type SemanticSignalKind =
+  | "own_identity"
+  | "borrowed_identity"
+  | "host_attachment"
+  | "participant_count"
+  | "membership_relation"
+  | "occurs_at"
+  | "observed_at"
+  | "externally_assigned"
+  | "lifecycle_stage"
+  | "institutionally_defined"
+  | "relation_endpoints";
+
+export type ParticipantSlotKind =
+  | "bearer"
+  | "player"
+  | "context"
+  | "subject"
+  | "source"
+  | "participant"
+  | "member"
+  | "observed_entity"
+  | "base_type";
+
+/** A typed participant requirement resolved against the containing schema version. */
+export interface SemanticParticipantSlot {
+  name: string;
+  template_slot: ParticipantSlotKind;
+  object_types?: string[];
+  min?: number;
+  max?: number;
+  relation_type?: string;
+}
+
+export type FieldSemanticKind =
+  | "phase_indicator"
+  | "role_indicator"
+  | "internal_disposition"
+  | "event_time"
+  | "observed_at"
+  | "source_wording";
+
+/** Typed meaning for a concrete object field; prose is never compiled. */
+export interface FieldSemantic {
+  field: string;
+  semantic: FieldSemanticKind;
+  temporal_mode?: SemanticTemporalMode;
+  lossy?: boolean;
+}
+
+export type NormativeKind = "need" | "constraint" | "obligation" | "preference" | "unspecified";
+
+export type CanonicalAttachmentAuthority = "relation" | "reference_field";
+export type CanonicalAttachmentDirection = "outgoing" | "incoming";
+
+/** Declares which of a relation/reference-field pair owns an attachment fact. */
+export interface CanonicalAttachmentBinding {
+  slot: string;
+  relation_type: string;
+  reference_field?: string;
+  authority: CanonicalAttachmentAuthority;
+  direction: CanonicalAttachmentDirection;
+}
+
+/** Pins a match to one immutable global archetype template version. */
+export interface SemanticTemplateRef {
+  id: string;
+  version: number;
+}
+
+export interface SemanticEvidenceRef {
+  id: string;
+  source_kind: SemanticEvidenceSourceKind;
+  source_ref: string;
+  asserted_by?: string;
+  asserted_at?: string;
+}
+
+export interface SemanticGeneratorRef {
+  id: string;
+  version: number;
+  proposal_ref?: string;
+}
+
+export interface SemanticSignal {
+  signal: SemanticSignalKind;
+  value: boolean | number | string;
+  evidence_ref: SemanticEvidenceRef;
+  generator?: SemanticGeneratorRef;
+  confidence: number;
+  observed_at?: string;
+}
+
+export interface SemanticNegativeControl {
+  template: SemanticTemplateRef;
+  reason: string;
+}
+
+export interface SemanticMatchAlternative {
+  template: SemanticTemplateRef;
+  confidence: number;
+  reason: string;
+  evidence?: SemanticSignal[];
+}
+
+export interface SemanticModifierMatch {
+  template: SemanticTemplateRef;
+  evidence: SemanticSignal[];
+  negative_control: SemanticNegativeControl;
+}
+
+export interface SemanticReviewDecision {
+  actor: string;
+  decided_at: string;
+  rationale: string;
+  premises?: string[];
+  supersedes?: string;
+}
+
+export interface SemanticTenantBindings {
+  ontological_base_kind?: OntologicalBaseKind;
+  rigidity?: SemanticRigidity;
+  identity_mode?: SemanticIdentityMode;
+  dependence?: SemanticDependence;
+  temporal_mode?: SemanticTemporalMode;
+  slots?: SemanticParticipantSlot[];
+  fields?: FieldSemantic[];
+  normative_kind?: NormativeKind;
+  attachments?: CanonicalAttachmentBinding[];
+}
+
+export type SemanticRelationKind =
+  | "association"
+  | "mediation"
+  | "participation"
+  | "membership"
+  | "characterization"
+  | "part_whole"
+  | "derivation"
+  | "classification"
+  | "unspecified";
+
+/** Unified evidence-backed classification for object and relation types. */
+export interface SemanticMatch {
+  version: number;
+  template: SemanticTemplateRef;
+  modifiers?: SemanticModifierMatch[];
+  status: SemanticMatchStatus;
+  evidence: SemanticSignal[];
+  negative_control: SemanticNegativeControl;
+  alternatives?: SemanticMatchAlternative[];
+  bindings?: SemanticTenantBindings;
+  confidence: number;
+  rationale: string;
+  proposed_by?: SemanticGeneratorRef[];
+  decision?: SemanticReviewDecision;
+}
+
 /** Field schema entry inside `OntologyObjectType.fields_json`. */
 export interface FieldDefinition {
   name: string;
@@ -1027,6 +1229,12 @@ export interface OntologySchema {
   description?: string;
   status: "draft" | "active" | "deprecated" | "archived";
   version: number;
+  /**
+   * Advisory semantic-profile validation is opt-in per schema. Optional so the
+   * SDK tolerates servers that predate the field (the server itself defaults
+   * absent rows to "off").
+   */
+  semantic_validation_mode?: SemanticValidationMode;
   propose_status?: "pending" | "running" | "ready" | "failed" | null;
   propose_job_id?: string | null;
   propose_error?: string | null;
@@ -1053,6 +1261,8 @@ export interface OntologyObjectType {
   extraction_hints?: string | null;
   default_confidence: number;
   review_policy: "always" | "low_confidence" | "never";
+  /** Accepted semantic match. Candidates remain in the proposal ledger. */
+  semantic_match?: SemanticMatch | null;
   /** Datasource binding (null = extracted/authored). */
   backing?: ObjectBacking | null;
   status: "active" | "deprecated" | "archived";
@@ -1077,6 +1287,8 @@ export interface OntologyRelationType {
   fields_json: FieldDefinition[];
   extraction_hints?: string | null;
   review_policy: "always" | "low_confidence" | "never";
+  /** Accepted relation match. Candidates remain in the proposal ledger. */
+  semantic_match?: SemanticMatch | null;
   /** Datasource binding (null = extracted/authored). */
   backing?: RelationBacking | null;
   status: "active" | "deprecated" | "archived";
@@ -1109,6 +1321,7 @@ export interface CreateOntologySchemaRequest {
 export interface UpdateOntologySchemaRequest {
   name?: string;
   description?: string;
+  semantic_validation_mode?: SemanticValidationAuthoringMode;
 }
 
 export interface OntologyObjectTypeInput {
@@ -1123,6 +1336,8 @@ export interface OntologyObjectTypeInput {
   extraction_hints?: string;
   default_confidence?: number;
   review_policy?: "always" | "low_confidence" | "never";
+  /** Add, replace, or clear the object's accepted semantic match. */
+  semantic_match?: SemanticMatch | null;
   /** Bind this object type to an external source (SQL). Omit for extracted/authored. */
   backing?: ObjectBacking | null;
 }
@@ -1140,6 +1355,8 @@ export interface OntologyRelationTypeInput {
   fields?: FieldDefinition[];
   extraction_hints?: string;
   review_policy?: "always" | "low_confidence" | "never";
+  /** Add, replace, or clear the relation's accepted semantic match. */
+  semantic_match?: SemanticMatch | null;
   /** Bind this relation to an FK column or M:M join table. Both endpoints must be sql-mapped. */
   backing?: RelationBacking | null;
 }
