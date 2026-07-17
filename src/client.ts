@@ -52,6 +52,7 @@ import type {
   UpdateOntologySchemaRequest,
   ProposeOntologySchemaRequest,
   OntologyProposal,
+  OntologyDuplicateAudit,
   ProposalEdits,
   OntologyQueryRequest,
   OntologyQueryResponse,
@@ -1157,12 +1158,31 @@ export class MindGraph {
     );
   }
 
+  /** Generate inert semantic classifications for individual human review. */
+  async analyzeOntologySemanticGuidance(
+    schemaId: string,
+  ): Promise<{ created: number }> {
+    return this.post(
+      `/v1/ontology/schemas/${schemaId}/semantic-guidance/analyze`,
+      {},
+    );
+  }
+
+  /** Read-only exact-identity collision audit; never merges graph data. */
+  async auditOntologyDuplicates(
+    schemaId: string,
+  ): Promise<OntologyDuplicateAudit> {
+    return this.post(`/v1/ontology/schemas/${schemaId}/duplicates/audit`, {});
+  }
+
   // ---- Proposals ----
 
   async listOntologyProposals(opts?: {
     status?: string;
     schema_id?: string;
     object_type?: string;
+    proposal_type?: string;
+    extract_job_id?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ items: OntologyProposal[]; limit: number; offset: number }> {
@@ -1170,6 +1190,8 @@ export class MindGraph {
     if (opts?.status) q.set("status", opts.status);
     if (opts?.schema_id) q.set("schema_id", opts.schema_id);
     if (opts?.object_type) q.set("object_type", opts.object_type);
+    if (opts?.proposal_type) q.set("proposal_type", opts.proposal_type);
+    if (opts?.extract_job_id) q.set("extract_job_id", opts.extract_job_id);
     if (opts?.limit != null) q.set("limit", String(opts.limit));
     if (opts?.offset != null) q.set("offset", String(opts.offset));
     const qs = q.toString();

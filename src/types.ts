@@ -1286,6 +1286,7 @@ export interface OntologyRelationType {
   inverse_relation_type?: string | null;
   fields_json: FieldDefinition[];
   extraction_hints?: string | null;
+  default_confidence: number;
   review_policy: "always" | "low_confidence" | "never";
   /** Accepted relation match. Candidates remain in the proposal ledger. */
   semantic_match?: SemanticMatch | null;
@@ -1354,6 +1355,7 @@ export interface OntologyRelationTypeInput {
   inverse_relation_type?: string;
   fields?: FieldDefinition[];
   extraction_hints?: string;
+  default_confidence?: number;
   review_policy?: "always" | "low_confidence" | "never";
   /** Add, replace, or clear the relation's accepted semantic match. */
   semantic_match?: SemanticMatch | null;
@@ -1368,6 +1370,8 @@ export interface OntologyProposal {
   schema_id: string;
   proposal_type: string;
   proposed_by_agent_id?: string | null;
+  proposed_by_user_id?: string | null;
+  extract_job_id?: string | null;
   source_uids: string[];
   source_scope_ids: string[];
   changes_json: {
@@ -1391,6 +1395,31 @@ export interface OntologyProposal {
   created_at: string;
   resolved_at?: string | null;
   resolved_by?: string | null;
+}
+
+export interface OntologyDuplicateAudit {
+  schema_id: string;
+  object_groups: Array<{
+    object_type: string;
+    identity_hash: string;
+    canonical_uid: string;
+    members: Array<{ uid: string; label: string; source_uids: string[] }>;
+    conflicting_fields: string[];
+    affected_edges: number;
+    auto_merge_safe: boolean;
+  }>;
+  relation_groups: Array<{
+    relation_type: string;
+    identity_hash: string;
+    canonical_uid: string;
+    edge_uids: string[];
+    from_uid: string;
+    to_uid: string;
+    auto_merge_safe: boolean;
+  }>;
+  objects_without_deterministic_identity: number;
+  context_ambiguous_objects: number;
+  repeatable_relations_skipped: number;
 }
 
 export interface ProposalEdits {

@@ -75,6 +75,34 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("ontology review and audit routes", () => {
+  test("supports run-scoped semantic proposal filtering", async () => {
+    installFetchStub({ items: [], limit: 50, offset: 0 });
+    const mg = newClient();
+    await mg.listOntologyProposals({
+      schema_id: "schema-1",
+      proposal_type: "semantic_match_candidate",
+      extract_job_id: "job-1",
+    });
+    const url = new URL(captured[0].url);
+    expect(url.pathname).toBe("/v1/ontology/proposals");
+    expect(url.searchParams.get("schema_id")).toBe("schema-1");
+    expect(url.searchParams.get("proposal_type")).toBe("semantic_match_candidate");
+    expect(url.searchParams.get("extract_job_id")).toBe("job-1");
+  });
+
+  test("exposes explicit semantic analysis and read-only duplicate audit", async () => {
+    installFetchStub({ created: 0 });
+    const mg = newClient();
+    await mg.analyzeOntologySemanticGuidance("schema-1");
+    await mg.auditOntologyDuplicates("schema-1");
+    expect(captured.map((request) => [request.method, new URL(request.url).pathname])).toEqual([
+      ["POST", "/v1/ontology/schemas/schema-1/semantic-guidance/analyze"],
+      ["POST", "/v1/ontology/schemas/schema-1/duplicates/audit"],
+    ]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Sanity: the stub really intercepts and no real network is hit.
 // ---------------------------------------------------------------------------

@@ -104,4 +104,7 @@ export type {
   UpdateOntologySchemaRequest,
   OntologyObjectTypeInput,
   OntologyRelationTypeInput,
+  OntologyProposal,
+  ProposalEdits,
+  OntologyDuplicateAudit,
 } from "./types.js";
