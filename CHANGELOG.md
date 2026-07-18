@@ -7,8 +7,18 @@
 - `RetrieveContextRequest.graph_expansion_limit` / `graph_max_depth`, plus
   retrieval-path metadata on graph-expanded response nodes.
 - `TraverseRequest.exclude_edge_types`, `include_provenance`, and `max_nodes`.
+- `MergeCandidate.node_a_truth_status` / `node_b_truth_status` (server >= 1.9):
+  per-side Claim truth status so curation UIs can flag a refuted side before a
+  merge.
 
 ### Changed
+
+- `resolveDecision` against server >= 1.9 is replace-semantics: re-resolving
+  tombstones the prior `DecidedOn` edge (exactly one live canonical edge) and
+  the response reports `replaced_decided_on`; invalid decision/option/context
+  UIDs are rejected up front. The offline contract suite now asserts the
+  resolve/distill wire names (`informs_uid`, `as_of_date`, `session_id`,
+  `retrieval_trace_id`, `output_type`), so a rename goes red in CI.
 
 - `PathStep.depth`, `parent_uid`, `path_cost`, and `path_confidence` now describe
   the selected min-cost witness path (server >= 1.9.0), not first-discovery BFS.
