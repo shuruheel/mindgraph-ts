@@ -80,6 +80,19 @@ export interface MergeCandidate {
   method: string | null;
 }
 
+/** A derived statement awaiting review after a load-bearing premise changed. */
+export interface StaleDerivation {
+  invalidation_uid: string;
+  invalidator_uid: string;
+  invalidator_label: string;
+  node_uid: string;
+  node_label: string;
+  node_summary: string;
+  node_type: string;
+  reason: string | null;
+  invalidated_at: string | null;
+}
+
 /** A `/retrieve` hybrid result: the full node plus the fused RRF score. */
 export interface HybridSearchResult {
   node: GraphNode;
@@ -313,6 +326,12 @@ export interface DeliberationRequest {
   chosen_option_uid?: string;
   blocks_uid?: string;
   informs_uid?: string[];
+  /** ISO 8601 date when resolve-time context was available. */
+  as_of_date?: string;
+  /** Session whose retrieval context informed the resolution. */
+  session_id?: string;
+  /** Optional identifier of the decision-time retrieval trace. */
+  retrieval_trace_id?: string;
   props?: Record<string, unknown>;
   agent_id?: string;
 }
@@ -357,6 +376,8 @@ export interface SessionRequest {
 
 export interface DistillRequest {
   label: string;
+  /** Defaults to "summary" for backward compatibility. */
+  output_type?: "summary" | "lesson";
   summary?: string;
   confidence?: number;
   salience?: number;
@@ -428,7 +449,7 @@ export interface RetrieveRequest {
    * Retrieval action. Note: `"semantic"` requires a configured embedding
    * provider on the server; for semantic search use `retrieveContext()` instead.
    */
-  action: "text" | "semantic" | "hybrid" | "active_goals" | "open_questions" | "weak_claims" | "pending_approvals" | "unresolved_contradictions" | "preferences" | "layer" | "recent";
+  action: "text" | "semantic" | "hybrid" | "active_goals" | "open_questions" | "weak_claims" | "pending_approvals" | "unresolved_contradictions" | "stale_derivations" | "preferences" | "layer" | "recent";
   /**
    * Required for `"text"`, `"semantic"`, `"hybrid"`. Optional for
    * `"preferences"`: with a `query` you get topic-relevant preferences (the

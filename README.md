@@ -88,6 +88,7 @@ const entity = await graph.findOrCreateEntity("Some Entity");
 |--------|-------------|
 | `commit(req)` | Create a goal, project, or milestone |
 | `deliberate(req)` | Open decisions, add options/constraints, resolve decisions |
+| `resolveDecision(decisionUid, optionUid, opts)` | Resolve with optional dated context and session/retrieval-trace linkage |
 
 ### Action Layer
 
@@ -102,7 +103,7 @@ const entity = await graph.findOrCreateEntity("Some Entity");
 |--------|-------------|
 | `session(req)` | Open a session, record traces, or close a session |
 | `journal(label, props, options?)` | Record a journal entry linked to an optional session |
-| `distill(req)` | Create a summary that distills multiple source nodes |
+| `distill(req)` | Create a Summary (default) or Lesson with source provenance |
 | `memoryConfig(req)` | Set/get preferences and memory policies |
 
 ### Agent Layer

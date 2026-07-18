@@ -26,6 +26,7 @@ export const RETRIEVE_ACTIONS = [
   "unresolved_contradictions",
   "merge_candidates",
   "curation_counts",
+  "stale_derivations",
   "preferences",
   "layer",
   "recent",
@@ -245,7 +246,16 @@ export const CONTRACT: ContractEntry[] = [
     httpMethod: "POST",
     action: "resolve",
     requiredFields: ["action", "decision_uid", "chosen_option_uid"],
-    args: ["dec-uid", "opt-uid"],
+    args: [
+      "dec-uid",
+      "opt-uid",
+      {
+        informs_uid: ["ctx-uid"],
+        as_of_date: "2026-07-17",
+        session_id: "session-7",
+        retrieval_trace_id: "trace-7",
+      },
+    ],
   },
 
   // ---- Action ----
@@ -291,7 +301,7 @@ export const CONTRACT: ContractEntry[] = [
     action: null,
     requiredFields: ["label"],
     forbiddenFields: ["action"],
-    args: [{ label: "Lesson", summary: "S", summarizes_uids: ["a"] }],
+    args: [{ label: "Lesson", output_type: "lesson", summary: "S", summarizes_uids: ["a"] }],
   },
   {
     method: "memoryConfig",
@@ -350,6 +360,14 @@ export const CONTRACT: ContractEntry[] = [
     endpoint: "/retrieve",
     httpMethod: "POST",
     action: "merge_candidates",
+    requiredFields: ["action"],
+    args: [],
+  },
+  {
+    method: "getStaleDerivations",
+    endpoint: "/retrieve",
+    httpMethod: "POST",
+    action: "stale_derivations",
     requiredFields: ["action"],
     args: [],
   },

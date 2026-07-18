@@ -5,6 +5,7 @@ import type {
   SearchResult,
   HybridSearchResult,
   MergeCandidate,
+  StaleDerivation,
   EnrichedSearchResponse,
   PathStep,
   CaptureRequest,
@@ -395,7 +396,15 @@ export class MindGraph {
   async resolveDecision(
     decisionUid: string,
     chosenOptionUid: string,
-    opts?: { summary?: string; agent_id?: string },
+    opts?: {
+      summary?: string;
+      props?: Record<string, unknown>;
+      informs_uid?: string[];
+      as_of_date?: string;
+      session_id?: string;
+      retrieval_trace_id?: string;
+      agent_id?: string;
+    },
   ): Promise<unknown> {
     return this.post("/intent/deliberation", {
       action: "resolve",
@@ -888,6 +897,11 @@ export class MindGraph {
    */
   async getMergeCandidates(): Promise<MergeCandidate[]> {
     return this.post("/retrieve", { action: "merge_candidates" });
+  }
+
+  /** Load-bearing conclusions awaiting repair after a premise changed. */
+  async getStaleDerivations(limit = 50, offset = 0): Promise<StaleDerivation[]> {
+    return this.post("/retrieve", { action: "stale_derivations", limit, offset });
   }
 
   async getPendingApprovals(): Promise<GraphNode[]> {
