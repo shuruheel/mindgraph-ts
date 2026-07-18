@@ -245,7 +245,19 @@ export const CONTRACT: ContractEntry[] = [
     endpoint: "/intent/deliberation",
     httpMethod: "POST",
     action: "resolve",
-    requiredFields: ["action", "decision_uid", "chosen_option_uid"],
+    // The optional resolve fields are asserted as required HERE (the fixture
+    // supplies them) so a wire-name typo in any of them goes red offline —
+    // serde on the server silently drops unknown keys.
+    requiredFields: [
+      "action",
+      "decision_uid",
+      "chosen_option_uid",
+      "informs_uid",
+      "as_of_date",
+      "session_id",
+      "retrieval_trace_id",
+    ],
+    arrayFields: ["informs_uid"],
     args: [
       "dec-uid",
       "opt-uid",
@@ -299,8 +311,9 @@ export const CONTRACT: ContractEntry[] = [
     endpoint: "/memory/distill",
     httpMethod: "POST",
     action: null,
-    requiredFields: ["label"],
+    requiredFields: ["label", "output_type"],
     forbiddenFields: ["action"],
+    arrayFields: ["summarizes_uids"],
     args: [{ label: "Lesson", output_type: "lesson", summary: "S", summarizes_uids: ["a"] }],
   },
   {

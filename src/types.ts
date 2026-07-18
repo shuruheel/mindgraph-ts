@@ -78,6 +78,13 @@ export interface MergeCandidate {
   similarity: number | null;
   /** How the candidate was found: "exact" | "fuzzy" | "semantic" | "llm". */
   method: string | null;
+  /**
+   * Normalized `truth_status` of each side (Claims), so curation UIs can
+   * warn before merging a refuted claim. Absent on servers older than the
+   * hardening batch.
+   */
+  node_a_truth_status?: string | null;
+  node_b_truth_status?: string | null;
 }
 
 /** A derived statement awaiting review after a load-bearing premise changed. */
@@ -122,11 +129,10 @@ export interface PathStep {
   edge_type: string | null;
   depth: number;
   parent_uid: string | null;
-  /** Min-plus cost of the returned BFS path from the start node
-   * (sum of -ln(weight), weights clamped to (1e-9, 1]); cost of the path
-   * the traversal returned, not the cheapest path. 0 at the start node. */
+  /** Min-plus cost of the selected cheapest path from the start node
+   * (sum of -ln(weight), weights clamped to (1e-9, 1]). */
   path_cost?: number;
-  /** Product of edge confidences along the returned BFS path (clamped to
+  /** Product of edge confidences along the selected min-cost path (clamped to
    * (1e-9, 1]); a ranking signal, not a calibrated probability. 1 at the
    * start node. */
   path_confidence?: number;
@@ -500,7 +506,12 @@ export interface TraverseRequest {
   max_depth?: number;
   direction?: "outgoing" | "incoming" | "both";
   edge_types?: string[];
+  exclude_edge_types?: string[];
   weight_threshold?: number;
+  /** Include ingestion/provenance edges excluded by default. */
+  include_provenance?: boolean;
+  /** Global distinct-node budget, including the seed (default 500). */
+  max_nodes?: number;
   /** `top_k_paths` only: number of cheapest paths to return (default 3, cap 25). */
   k?: number;
   /** `top_k_paths` only: max edges per path (default 8, cap 16). */
@@ -509,9 +520,9 @@ export interface TraverseRequest {
   max_cost?: number;
 }
 
-/** One result of the `top_k_paths` traverse action: the true k-cheapest
- * min-plus paths (engine `min_cost_k` semiring aggregation in recursion —
- * the optimum, unlike PathStep's first-discovery BFS scores). */
+/** One result of the `top_k_paths` traverse action: the k-cheapest complete
+ * min-plus paths (engine `min_cost_k` semiring aggregation in recursion).
+ * `PathStep` instead exposes one cheapest witness per admitted node. */
 export interface ScoredPath {
   node_uids: string[];
   labels: string[];
@@ -665,6 +676,11 @@ export interface RetrieveContextRequest {
   layer?: string;
   include_graph?: boolean;
   min_similarity?: number;
+  /** Reserve up to this many node slots for cheapest-first graph expansion.
+   * Default 0 preserves direct-only retrieval. */
+  graph_expansion_limit?: number;
+  /** Maximum graph-expansion hops (default 2). */
+  graph_max_depth?: number;
   /**
    * M3 as-of (valid time): ISO-8601 date to judge validity windows against.
    * Windowed nodes then carry `valid_at_time` instead of `currently_valid`.
@@ -766,6 +782,11 @@ export interface RetrieveContextResponse {
       currently_valid?: boolean;
       /** As-of variant of `currently_valid` when the request set `valid_at`. */
       valid_at_time?: boolean;
+      /** Present when the node was added by budgeted graph expansion. */
+      retrieval_origin?: "graph_expansion";
+      retrieval_path_cost?: number;
+      retrieval_depth?: number;
+      retrieval_parent_uid?: string | null;
     })[];
     edges: Record<string, unknown>[];
   };

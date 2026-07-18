@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased (1.9 product train)
+
+### Added
+
+- `RetrieveContextRequest.graph_expansion_limit` / `graph_max_depth`, plus
+  retrieval-path metadata on graph-expanded response nodes.
+- `TraverseRequest.exclude_edge_types`, `include_provenance`, and `max_nodes`.
+
+### Changed
+
+- `PathStep.depth`, `parent_uid`, `path_cost`, and `path_confidence` now describe
+  the selected min-cost witness path (server >= 1.9.0), not first-discovery BFS.
+- Sparse graph expansion backfills unused slots from the unchanged direct
+  ranking; node filters are applied before traversal admission.
+
 ## 0.11.0 (2026-07-07)
 
 ### Added
