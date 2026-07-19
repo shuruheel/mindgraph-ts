@@ -70,6 +70,23 @@ beforeEach(() => {
   captured = [];
 });
 
+describe("corpus project wire contract", () => {
+  test("carries project_uid through ingestion, search, and context retrieval", async () => {
+    installFetchStub([]);
+    const mg = newClient();
+
+    await mg.ingestDocument({ content: "source", project_uid: "project-1" });
+    await mg.search("query", { project_uid: "project-1" });
+    await mg.retrieveContext({ query: "query", project_uid: "project-1" });
+
+    expect(captured.map((request) => request.body)).toEqual([
+      { content: "source", project_uid: "project-1" },
+      { query: "query", project_uid: "project-1" },
+      { query: "query", project_uid: "project-1" },
+    ]);
+  });
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();

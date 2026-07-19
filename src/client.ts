@@ -657,6 +657,7 @@ export class MindGraph {
   // ---- Search ----
 
   async search(query: string, opts?: {
+    project_uid?: string;
     node_type?: string;
     layer?: string;
     limit?: number;
@@ -673,6 +674,7 @@ export class MindGraph {
    * the "why retrieved" detail (server ≥ 1.2.0; older servers ignore it).
    */
   async hybridSearch(query: string, opts?: {
+    project_uid?: string;
     k?: number;
     node_types?: string[];
     layer?: string;

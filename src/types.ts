@@ -467,6 +467,8 @@ export interface RetrieveRequest {
    * reflect what the user likes.
    */
   query?: string;
+  /** Corpus Project whose member sources define the retrieval boundary. */
+  project_uid?: string;
   k?: number;
   threshold?: number;
   layer?: string;
@@ -599,6 +601,8 @@ export interface IngestChunkResponse {
 export interface IngestDocumentRequest {
   content: string;
   title?: string;
+  /** Corpus Project to attach the ingested document to. */
+  project_uid?: string;
   document_type?: string;
   /** Semantic content type: "article" (default), "meeting_notes", "journal". Drives default extraction layers. */
   content_type?: string;
@@ -666,6 +670,8 @@ export interface IngestSessionRequest {
 
 export interface RetrieveContextRequest {
   query: string;
+  /** Corpus Project whose member sources define the retrieval boundary. */
+  project_uid?: string;
   /** Max graph nodes to return (default 10). */
   node_limit?: number;
   /** Max wiki articles to return (default 3). Set to 0 to skip. */
