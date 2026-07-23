@@ -979,6 +979,12 @@ export interface MindGraphConfig {
   apiKey?: string;
   jwt?: string;
   orgId?: string;
+  /**
+   * Non-security telemetry hint for first-party adapters. The cloud accepts
+   * only `dashboard`/`mcp`, normalizes everything else to `api`, and never
+   * uses this value for authorization or result membership.
+   */
+  telemetrySurface?: "dashboard" | "mcp";
   /** Max retries for 503 (server warming up) responses. Default: 3. Set to 0 to disable. */
   maxRetries?: number;
   /** Initial backoff in ms before first retry. Doubles each attempt. Default: 1000. */
@@ -1357,8 +1363,15 @@ export interface OntologyToolDescriptor {
   description: string;
   schema_id: string;
   object_type: string;
-  /** "search" | "object" | "object_context" */
-  maps_to: string;
+  maps_to:
+    | "search"
+    | "object"
+    | "object_context"
+    | "related"
+    | "structured_query";
+  relation?: string;
+  entry_role?: "source" | "target";
+  far_type?: string;
   input_schema: Record<string, unknown>;
 }
 
@@ -1501,6 +1514,77 @@ export interface OntologyQueryRequest {
   include_sources?: boolean;
   depth?: number;
   limit?: number;
+}
+
+export type OntologyPredicateOperator =
+  | "eq"
+  | "neq"
+  | "in"
+  | "contains"
+  | "gte"
+  | "lte"
+  | "exists";
+
+export interface OntologyQueryPredicate {
+  field: string;
+  op: OntologyPredicateOperator;
+  value?: unknown;
+}
+
+export interface StructuredOntologyQueryRequest {
+  schema_id: string;
+  select: string;
+  project_uid?: string;
+  anchor?: {
+    type: string;
+    uid?: string;
+    match?: { value: string; field?: string };
+  };
+  path?: Array<{
+    relation: string;
+    entry_role: "source" | "target";
+  }>;
+  where?: OntologyQueryPredicate[];
+  include?: { provenance?: boolean; related?: string[] };
+  page?: { limit?: number; offset?: number };
+  aggregate?: { op: "count" | "customer_demand_rank"; group_by?: string };
+}
+
+export interface StructuredOntologyQueryResponse {
+  plan: Record<string, unknown>;
+  rows: Array<{ object: DomainObject; related?: Record<string, DomainObject[]> }>;
+  relations: Array<{
+    uid: string;
+    relation: string;
+    from_uid: string;
+    to_uid: string;
+    fields: unknown;
+    leg_index?: number;
+  }>;
+  provenance: Array<{ node_uid: string; source_uid: string; text_span: string }>;
+  aggregate?: unknown;
+  total_count: number;
+  total_count_exact: boolean;
+  returned_count: number;
+  has_more: boolean;
+  coverage_complete: boolean;
+  truncation_reasons: string[];
+  diagnostics: string[];
+  metrics: Record<string, unknown>;
+}
+
+export interface RelatedDomainObjectsRequest {
+  schema_id: string;
+  entry_type: string;
+  uid: string;
+  relation: string;
+  entry_role: "source" | "target";
+  far_type: string;
+  where?: OntologyQueryPredicate[];
+  include_provenance?: boolean;
+  limit?: number;
+  offset?: number;
+  project_uid?: string;
 }
 
 export interface OntologyQueryResponse {

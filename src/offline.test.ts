@@ -120,6 +120,95 @@ describe("ontology review and audit routes", () => {
   });
 });
 
+describe("graph-aware ontology retrieval wire contract", () => {
+  test("sends the closed structured query representation unchanged", async () => {
+    installFetchStub({ rows: [], total_count: 0, total_count_exact: true });
+    const mg = newClient();
+    const request = {
+      schema_id: "schema-a",
+      select: "Requirement",
+      anchor: { type: "Customer", uid: "customer-1" },
+      path: [{ relation: "REQUESTED_BY", entry_role: "target" as const }],
+      where: [{ field: "status", op: "eq" as const, value: "open" }],
+      page: { limit: 100, offset: 0 },
+    };
+    await mg.queryDomainStructured(request);
+    expect(captured[0].method).toBe("POST");
+    expect(new URL(captured[0].url).pathname).toBe("/ontology/query/structured");
+    expect(captured[0].body).toEqual(request);
+  });
+
+  test("compiles related reads to a typed UID anchor and relation leg", async () => {
+    installFetchStub({ rows: [], total_count: 0, total_count_exact: true });
+    const mg = newClient();
+    await mg.queryRelatedDomainObjects({
+      schema_id: "schema-a",
+      entry_type: "Customer",
+      uid: "customer-1",
+      relation: "REQUESTED_BY",
+      entry_role: "target",
+      far_type: "Requirement",
+      where: [{ field: "status", op: "eq", value: "open" }],
+      include_provenance: true,
+      limit: 50,
+      offset: 5,
+    });
+    expect(captured[0].body).toEqual({
+      schema_id: "schema-a",
+      select: "Requirement",
+      anchor: { type: "Customer", uid: "customer-1" },
+      path: [{ relation: "REQUESTED_BY", entry_role: "target" }],
+      where: [{ field: "status", op: "eq", value: "open" }],
+      include: { provenance: true },
+      page: { limit: 50, offset: 5 },
+    });
+  });
+
+  test("binds discovery and point reads to schema and object type", async () => {
+    installFetchStub({
+      items: [],
+      returned_count: 0,
+      has_more: false,
+      seed_cap_hit: false,
+      truncation_reasons: [],
+      total_count: null,
+      total_count_exact: false,
+    });
+    const mg = newClient();
+    await mg.searchDomainObjects("dispatch", {
+      schema_id: "schema-a",
+      object_types: ["Requirement"],
+      filters: [{ field: "status", op: "eq", value: "open" }],
+      limit: 10,
+    });
+    await mg.getDomainObject("requirement-1", {
+      schema_id: "schema-a",
+      object_type: "Requirement",
+    });
+    await mg.getDomainObjectContext("requirement-1", 2, {
+      schema_id: "schema-a",
+      object_type: "Requirement",
+    });
+
+    expect(captured[0].body).toEqual({
+      query: "dispatch",
+      schema_id: "schema-a",
+      object_types: ["Requirement"],
+      filters: [{ field: "status", op: "eq", value: "open" }],
+      limit: 10,
+    });
+    const point = new URL(captured[1].url);
+    expect(point.pathname).toBe("/ontology/object/requirement-1");
+    expect(point.searchParams.get("schema_id")).toBe("schema-a");
+    expect(point.searchParams.get("object_type")).toBe("Requirement");
+    const context = new URL(captured[2].url);
+    expect(context.pathname).toBe("/ontology/object/requirement-1/context");
+    expect(context.searchParams.get("depth")).toBe("2");
+    expect(context.searchParams.get("schema_id")).toBe("schema-a");
+    expect(context.searchParams.get("object_type")).toBe("Requirement");
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Sanity: the stub really intercepts and no real network is hit.
 // ---------------------------------------------------------------------------
@@ -139,6 +228,19 @@ describe("offline transport stub", () => {
     await mg.capture({ action: "source", label: "x" });
     expect(captured[0].headers["Authorization"]).toBe("Bearer mg_test_offline");
     expect(captured[0].headers["Content-Type"]).toBe("application/json");
+    expect(captured[0].headers["X-MindGraph-Request-ID"]).toMatch(/^[A-Za-z0-9._:-]+$/);
+  });
+
+  test("adds the normalized MCP hint without changing request bodies", async () => {
+    installFetchStub();
+    const mg = new MindGraph({
+      baseUrl: BASE,
+      apiKey: "mg_test_offline",
+      telemetrySurface: "mcp",
+    });
+    await mg.retrieveContext({ query: "customer requirements" });
+    expect(captured[0].headers["X-MindGraph-Surface"]).toBe("mcp");
+    expect(captured[0].body).toEqual({ query: "customer requirements" });
   });
 });
 

@@ -107,4 +107,10 @@ export type {
   OntologyProposal,
   ProposalEdits,
   OntologyDuplicateAudit,
+  OntologyQueryPredicate,
+  OntologyPredicateOperator,
+  StructuredOntologyQueryRequest,
+  StructuredOntologyQueryResponse,
+  RelatedDomainObjectsRequest,
+  OntologyToolDescriptor,
 } from "./types.js";

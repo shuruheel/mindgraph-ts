@@ -57,6 +57,10 @@ import type {
   ProposalEdits,
   OntologyQueryRequest,
   OntologyQueryResponse,
+  OntologyQueryPredicate,
+  RelatedDomainObjectsRequest,
+  StructuredOntologyQueryRequest,
+  StructuredOntologyQueryResponse,
   OntologyToolDescriptor,
   LinkDomainObjectsRequest,
   CreateDomainObjectRequest,
@@ -80,6 +84,7 @@ export class MindGraph {
   private headers: Record<string, string>;
   private maxRetries: number;
   private retryBackoffMs: number;
+  private telemetrySurface?: "dashboard" | "mcp";
 
   constructor(config: MindGraphConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
@@ -92,6 +97,7 @@ export class MindGraph {
     if (config.orgId) {
       this.headers["X-MindGraph-Org"] = config.orgId;
     }
+    this.telemetrySurface = config.telemetrySurface;
     this.maxRetries = config.maxRetries ?? 3;
     this.retryBackoffMs = config.retryBackoffMs ?? 1000;
   }
@@ -100,9 +106,17 @@ export class MindGraph {
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.baseUrl}${path}`;
+    // One id per logical call, retained across 503 retries.
+    const requestId = createRequestId();
     const init: RequestInit = {
       method,
-      headers: this.headers,
+      headers: {
+        ...this.headers,
+        "X-MindGraph-Request-ID": requestId,
+        ...(this.telemetrySurface
+          ? { "X-MindGraph-Surface": this.telemetrySurface }
+          : {}),
+      },
     };
     if (body !== undefined) {
       init.body = JSON.stringify(body);
@@ -1265,26 +1279,72 @@ export class MindGraph {
     return this.post("/ontology/query", req);
   }
 
+  async queryDomainStructured(
+    req: StructuredOntologyQueryRequest,
+  ): Promise<StructuredOntologyQueryResponse> {
+    return this.post("/ontology/query/structured", req);
+  }
+
+  async queryRelatedDomainObjects(
+    req: RelatedDomainObjectsRequest,
+  ): Promise<StructuredOntologyQueryResponse> {
+    return this.queryDomainStructured({
+      schema_id: req.schema_id,
+      select: req.far_type,
+      ...(req.project_uid ? { project_uid: req.project_uid } : {}),
+      anchor: { type: req.entry_type, uid: req.uid },
+      path: [{
+        relation: req.relation,
+        entry_role: req.entry_role,
+      }],
+      ...(req.where ? { where: req.where } : {}),
+      ...(req.include_provenance
+        ? { include: { provenance: true } }
+        : {}),
+      page: {
+        ...(req.limit != null ? { limit: req.limit } : {}),
+        ...(req.offset != null ? { offset: req.offset } : {}),
+      },
+    });
+  }
+
   /**
-   * Read-only agent tool descriptors generated from the active ontology
-   * schema(s). Each maps to a generic `/ontology` read endpoint with
-   * `object_type` bound. Used by the MCP server to expose typed per-object
-   * tools (`search_customers`, `summarize_customer`, …).
+   * Schema-qualified read-tool descriptors generated from every active
+   * ontology. Includes per-object discovery/point/context tools,
+   * relation-and-role-specific related tools, and one structured composite.
    */
   async listOntologyTools(): Promise<{ tools: OntologyToolDescriptor[] }> {
     return this.get("/v1/ontology/tools");
   }
 
-  async getDomainObject(uid: string): Promise<DomainObject> {
-    return this.get(`/ontology/object/${uid}`);
+  async getDomainObject(
+    uid: string,
+    binding?: { schema_id: string; object_type: string; project_uid?: string },
+  ): Promise<DomainObject> {
+    const query = new URLSearchParams();
+    if (binding) {
+      query.set("schema_id", binding.schema_id);
+      query.set("object_type", binding.object_type);
+      if (binding.project_uid) query.set("project_uid", binding.project_uid);
+    }
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return this.get(`/ontology/object/${uid}${suffix}`);
   }
 
   async getDomainObjectContext(
     uid: string,
     depth?: number,
+    binding?: { schema_id: string; object_type: string; project_uid?: string },
   ): Promise<OntologyQueryResponse> {
-    const qs = depth != null ? `?depth=${depth}` : "";
-    return this.get(`/ontology/object/${uid}/context${qs}`);
+    const query = new URLSearchParams();
+    if (depth != null) query.set("depth", String(depth));
+    if (binding) {
+      query.set("schema_id", binding.schema_id);
+      query.set("object_type", binding.object_type);
+      if (binding.project_uid) query.set("project_uid", binding.project_uid);
+    }
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return this.get(`/ontology/object/${uid}/context${suffix}`);
   }
 
   async getDomainObjectHistory(
@@ -1324,8 +1384,21 @@ export class MindGraph {
 
   async searchDomainObjects(
     query: string,
-    opts?: { schema_id?: string; object_types?: string[]; limit?: number },
-  ): Promise<{ items: Array<{ object: DomainObject; score: number }> }> {
+    opts?: {
+      schema_id?: string;
+      object_types?: string[];
+      filters?: OntologyQueryPredicate[];
+      limit?: number;
+    },
+  ): Promise<{
+    items: Array<{ object: DomainObject; score: number }>;
+    returned_count: number;
+    has_more: boolean;
+    seed_cap_hit: boolean;
+    truncation_reasons: string[];
+    total_count: null;
+    total_count_exact: false;
+  }> {
     return this.post("/ontology/objects/search", { query, ...(opts ?? {}) });
   }
 
@@ -1377,4 +1450,13 @@ export class MindGraph {
     return this.post("/ontology/extract", req);
   }
 
+}
+
+function createRequestId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  // Correlation only, never identity or authorization. This fallback supports
+  // older JS runtimes without pulling a Node-only crypto dependency.
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
