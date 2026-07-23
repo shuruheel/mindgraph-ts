@@ -121,6 +121,28 @@ describe("ontology review and audit routes", () => {
 });
 
 describe("graph-aware ontology retrieval wire contract", () => {
+  test("carries project scope through the legacy ontology query", async () => {
+    installFetchStub({
+      objects: [],
+      relations: [],
+      cognitive_context: {},
+      external_refs: [],
+      graph: { nodes: [], edges: [] },
+      provenance: [],
+      confidence: { overall: 0 },
+      returned_count: 0,
+      has_more: false,
+      seed_cap_hit: false,
+    });
+    const mg = newClient();
+    await mg.queryOntology({
+      query: "requirements",
+      schema_id: "schema-a",
+      project_uid: "project-a",
+    });
+    expect(captured[0].body).toMatchObject({ project_uid: "project-a" });
+  });
+
   test("sends the closed structured query representation unchanged", async () => {
     installFetchStub({ rows: [], total_count: 0, total_count_exact: true });
     const mg = newClient();

@@ -1509,6 +1509,7 @@ export interface ProposeOntologySchemaRequest {
 export interface OntologyQueryRequest {
   query: string;
   schema_id: string;
+  project_uid?: string;
   object_types?: string[];
   include_cognitive_context?: boolean;
   include_sources?: boolean;
@@ -1589,12 +1590,47 @@ export interface RelatedDomainObjectsRequest {
 
 export interface OntologyQueryResponse {
   objects: GraphNode[];
-  relations: GraphEdge[];
-  cognitive_context: Record<string, GraphNode[]>;
+  relations: Array<{
+    edge_uid: string | null;
+    from_uid: string;
+    to_uid: string;
+    edge_type: string;
+    traversal_role: string;
+    depth: number;
+  }>;
+  cognitive_context: Record<
+    string,
+    Array<{
+      uid: string;
+      label: string;
+      node_type: string;
+      layer: string;
+      depth: number;
+    }>
+  >;
   external_refs: unknown[];
-  graph: { nodes: GraphNode[]; edges: GraphEdge[] };
+  graph: {
+    nodes: Array<{
+      uid: string;
+      label: string;
+      node_type: string;
+      layer: string;
+      depth: number;
+    }>;
+    edges: Array<{
+      edge_uid: string | null;
+      from_uid: string;
+      to_uid: string;
+      edge_type: string;
+      traversal_role: string;
+      depth: number;
+    }>;
+  };
   provenance: Array<{ node_uid: string; source_uid: string; text_span: string }>;
   confidence: { overall: number };
+  returned_count: number;
+  has_more: boolean;
+  seed_cap_hit: boolean;
   truncated?: Record<string, boolean>;
 }
 
