@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+## 0.13.0 (2026-07-23)
+
+Requires server >= 1.10.0 for everything below. This release is the compatibility
+gate for `mindgraph-mcp` 0.13.0, which dispatches the generated ontology tools
+through these methods — publish this package first.
+
+### Added
+
+- **Structured ontology queries.** `queryDomainStructured(req)` →
+  `POST /ontology/query/structured` asks a validated, typed question of a Layer 7
+  schema — predicate filters, one- and two-leg traversal, and bounded exact counts
+  and aggregates — instead of ranking text. The response carries explicit coverage
+  metadata, so a partial answer reports itself as partial rather than reading as
+  complete. New types: `StructuredOntologyQueryRequest`,
+  `StructuredOntologyQueryResponse`, `OntologyQueryPredicate`, and
+  `OntologyPredicateOperator` (`eq`/`neq`/`in`/`contains`, validated against the
+  field's declared type).
+- `queryRelatedDomainObjects(req)` (`RelatedDomainObjectsRequest`) — typed
+  neighbours of a domain object along a named relation, scoped to the caller's
+  grants.
+- `getDomainObject(...)` — fetch a single domain object by identity.
+- `OntologyToolDescriptor` — the descriptor shape MCP clients read to generate
+  schema-qualified tools. Tool names always carry stable schema and relation
+  identity, so names cannot collide across schemas that reuse vocabulary.
+- **Project scope on corpus calls.** `search`, `hybridSearch`, `ingestDocument`,
+  and `retrieveContext` accept `project_uid`, confining the call to one project's
+  admitted sources.
+
+### Changed
+
+- Ontology query wire types were corrected against the server contract: field
+  types and nullability now match what `/ontology/query/structured` actually
+  returns, and the offline contract suite asserts the wire names so a rename goes
+  red in CI rather than surfacing as a runtime `undefined`.
+
 ## 0.12.0 (2026-07-18)
 
 ### Added
