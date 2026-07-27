@@ -68,6 +68,24 @@ import type {
   DomainObject,
 } from "./types.js";
 
+/**
+ * Encode one path segment.
+ *
+ * Every uid, id, and job id this SDK puts in a URL path arrives from the
+ * caller, and in agent deployments the caller is often a model. Interpolating
+ * such a value raw lets `../` climb out of the intended route and lets a `?`
+ * or `#` truncate the path and forge query parameters. `encodeURIComponent`
+ * escapes `/`, `?`, `#`, and `%`, so the value can only ever land as the one
+ * segment it was meant to be.
+ *
+ * Applied per segment rather than to a finished path: by the time a path is
+ * assembled the SDK can no longer tell a segment from the `?` that starts the
+ * query string, and encoding the whole thing would destroy both.
+ */
+function seg(value: string | number): string {
+  return encodeURIComponent(String(value));
+}
+
 export class MindGraphError extends Error {
   constructor(
     message: string,
@@ -504,7 +522,7 @@ export class MindGraph {
   // ---- Node CRUD ----
 
   async getNode(uid: string): Promise<GraphNode> {
-    return this.get(`/node/${uid}`);
+    return this.get(`/node/${seg(uid)}`);
   }
 
   /**
@@ -537,11 +555,11 @@ export class MindGraph {
       agent_id?: string;
     },
   ): Promise<GraphNode> {
-    return this.patch(`/node/${uid}`, body);
+    return this.patch(`/node/${seg(uid)}`, body);
   }
 
   async deleteNode(uid: string): Promise<void> {
-    await this.del(`/node/${uid}`);
+    await this.del(`/node/${seg(uid)}`);
   }
 
   async batchDeleteNodes(params: {
@@ -582,11 +600,11 @@ export class MindGraph {
   }
 
   async getNodeHistory(uid: string): Promise<unknown[]> {
-    return this.get(`/node/${uid}/history`);
+    return this.get(`/node/${seg(uid)}/history`);
   }
 
   async getNodeAtVersion(uid: string, version: number): Promise<GraphNode> {
-    return this.get(`/node/${uid}/history/${version}`);
+    return this.get(`/node/${seg(uid)}/history/${seg(version)}`);
   }
 
   // ---- Edge CRUD ----
@@ -627,15 +645,15 @@ export class MindGraph {
     props?: Record<string, unknown>;
     agent_id?: string;
   }): Promise<unknown> {
-    return this.patch(`/edge/${uid}`, body);
+    return this.patch(`/edge/${seg(uid)}`, body);
   }
 
   async deleteEdge(uid: string): Promise<void> {
-    await this.del(`/edge/${uid}`);
+    await this.del(`/edge/${seg(uid)}`);
   }
 
   async getEdgeHistory(uid: string): Promise<unknown[]> {
-    return this.get(`/edge/${uid}/history`);
+    return this.get(`/edge/${seg(uid)}/history`);
   }
 
   /**
@@ -718,7 +736,7 @@ export class MindGraph {
   }
 
   async getAgentNodes(agentId: string): Promise<GraphNode[]> {
-    return this.get(`/agent/${agentId}/nodes`);
+    return this.get(`/agent/${seg(agentId)}/nodes`);
   }
 
   // ---- Batch ----
@@ -766,15 +784,15 @@ export class MindGraph {
   }
 
   async getEmbedding(uid: string): Promise<unknown> {
-    return this.get(`/node/${uid}/embedding`);
+    return this.get(`/node/${seg(uid)}/embedding`);
   }
 
   async setEmbedding(uid: string, vector: number[]): Promise<void> {
-    await this.request("PUT", `/node/${uid}/embedding`, { vector });
+    await this.request("PUT", `/node/${seg(uid)}/embedding`, { vector });
   }
 
   async deleteEmbedding(uid: string): Promise<void> {
-    await this.del(`/node/${uid}/embedding`);
+    await this.del(`/node/${seg(uid)}/embedding`);
   }
 
   // ---- Entity resolution ----
@@ -796,7 +814,7 @@ export class MindGraph {
   }
 
   async getAliases(uid: string): Promise<unknown> {
-    return this.get(`/aliases/${uid}`);
+    return this.get(`/aliases/${seg(uid)}`);
   }
 
   async resolveAlias(text: string): Promise<unknown> {
@@ -957,11 +975,11 @@ export class MindGraph {
   }
 
   async getJob(id: string): Promise<Job> {
-    return this.get(`/jobs/${id}`);
+    return this.get(`/jobs/${seg(id)}`);
   }
 
   async cancelJob(id: string): Promise<unknown> {
-    return this.post(`/jobs/${id}/cancel`, {});
+    return this.post(`/jobs/${seg(id)}/cancel`, {});
   }
 
   /** Resume ingestion of a document that has failed chunks. */
@@ -969,12 +987,12 @@ export class MindGraph {
     docUid: string,
     opts?: { layers?: string[]; agent_id?: string },
   ): Promise<{ job_id: string; document_uid: string; chunks_to_resume: number }> {
-    return this.post(`/ingest/resume/${docUid}`, opts ?? {});
+    return this.post(`/ingest/resume/${seg(docUid)}`, opts ?? {});
   }
 
   /** Delete a document and all its chunks and extracted nodes. */
   async deleteDocument(uid: string): Promise<unknown> {
-    return this.del(`/ingest/document/${uid}`);
+    return this.del(`/ingest/document/${seg(uid)}`);
   }
 
   async cleanupOrphans(): Promise<unknown> {
@@ -1010,13 +1028,13 @@ export class MindGraph {
 
   /** Get a single wiki article by UID. */
   async getArticle(uid: string): Promise<GraphNode> {
-    return this.get(`/wiki/article/${uid}`);
+    return this.get(`/wiki/article/${seg(uid)}`);
   }
 
   /** Find the article that covers or summarizes a given entity/document UID. */
   async getArticleBySubject(subjectUid: string): Promise<GraphNode | null> {
     try {
-      return await this.get(`/wiki/article/by-subject/${subjectUid}`);
+      return await this.get(`/wiki/article/by-subject/${seg(subjectUid)}`);
     } catch {
       return null;
     }
@@ -1024,17 +1042,17 @@ export class MindGraph {
 
   /** Update an article's markdown content (user editing). */
   async updateArticle(uid: string, content: string): Promise<GraphNode> {
-    return this.patch(`/wiki/article/${uid}`, { content });
+    return this.patch(`/wiki/article/${seg(uid)}`, { content });
   }
 
   /** Trigger wiki compilation for a specific document. */
   async compileDocument(docUid: string): Promise<{ job_id?: string; status: string }> {
-    return this.post(`/wiki/compile/${docUid}`, {});
+    return this.post(`/wiki/compile/${seg(docUid)}`, {});
   }
 
   /** Trigger wiki compilation for a specific entity. */
   async compileEntity(entityUid: string): Promise<{ job_id: string }> {
-    return this.post(`/wiki/compile/entity/${entityUid}`, {});
+    return this.post(`/wiki/compile/entity/${seg(entityUid)}`, {});
   }
 
   /** Backfill: compile articles for all documents and eligible entities. */
@@ -1061,7 +1079,7 @@ export class MindGraph {
     if (opts?.signals) q.set("signals", opts.signals);
     if (opts?.target_types) q.set("target_types", opts.target_types);
     const qs = q.toString();
-    return this.get(`/synthesis/signals/${projectUid}${qs ? `?${qs}` : ""}`);
+    return this.get(`/synthesis/signals/${seg(projectUid)}${qs ? `?${qs}` : ""}`);
   }
 
   /**
@@ -1072,7 +1090,7 @@ export class MindGraph {
    * Returns a `job_id` immediately; poll `getJob(id)` for progress.
    */
   async runSynthesis(projectUid: string): Promise<SynthesisJobResponse> {
-    return this.post(`/synthesis/run/${projectUid}`, {});
+    return this.post(`/synthesis/run/${seg(projectUid)}`, {});
   }
 
   // ============================================================================
@@ -1086,7 +1104,7 @@ export class MindGraph {
   }
 
   async getOntologySchema(id: string): Promise<OntologySchemaDetail> {
-    return this.get(`/v1/ontology/schemas/${id}`);
+    return this.get(`/v1/ontology/schemas/${seg(id)}`);
   }
 
   async createOntologySchema(
@@ -1099,19 +1117,19 @@ export class MindGraph {
     id: string,
     req: UpdateOntologySchemaRequest,
   ): Promise<OntologySchema> {
-    return this.patch(`/v1/ontology/schemas/${id}`, req);
+    return this.patch(`/v1/ontology/schemas/${seg(id)}`, req);
   }
 
   async activateOntologySchema(id: string): Promise<OntologySchema> {
-    return this.post(`/v1/ontology/schemas/${id}/activate`, {});
+    return this.post(`/v1/ontology/schemas/${seg(id)}/activate`, {});
   }
 
   async deprecateOntologySchema(id: string): Promise<OntologySchema> {
-    return this.post(`/v1/ontology/schemas/${id}/deprecate`, {});
+    return this.post(`/v1/ontology/schemas/${seg(id)}/deprecate`, {});
   }
 
   async archiveOntologySchema(id: string): Promise<OntologySchema> {
-    return this.del(`/v1/ontology/schemas/${id}`);
+    return this.del(`/v1/ontology/schemas/${seg(id)}`);
   }
 
   /**
@@ -1129,7 +1147,7 @@ export class MindGraph {
     id: string,
     opts?: { example_queries?: string[] },
   ): Promise<{ job_id: string }> {
-    return this.post(`/v1/ontology/schemas/${id}/test`, opts ?? {});
+    return this.post(`/v1/ontology/schemas/${seg(id)}/test`, opts ?? {});
   }
 
   // ---- Schema sub-resources ----
@@ -1138,7 +1156,7 @@ export class MindGraph {
     schemaId: string,
     req: OntologyObjectTypeInput,
   ): Promise<OntologyObjectType> {
-    return this.post(`/v1/ontology/schemas/${schemaId}/object-types`, req);
+    return this.post(`/v1/ontology/schemas/${seg(schemaId)}/object-types`, req);
   }
 
   async updateOntologyObjectType(
@@ -1147,7 +1165,7 @@ export class MindGraph {
     req: Partial<OntologyObjectTypeInput>,
   ): Promise<OntologyObjectType> {
     return this.patch(
-      `/v1/ontology/schemas/${schemaId}/object-types/${typeId}`,
+      `/v1/ontology/schemas/${seg(schemaId)}/object-types/${seg(typeId)}`,
       req,
     );
   }
@@ -1157,7 +1175,7 @@ export class MindGraph {
     typeId: string,
   ): Promise<OntologyObjectType> {
     return this.del(
-      `/v1/ontology/schemas/${schemaId}/object-types/${typeId}`,
+      `/v1/ontology/schemas/${seg(schemaId)}/object-types/${seg(typeId)}`,
     );
   }
 
@@ -1165,7 +1183,7 @@ export class MindGraph {
     schemaId: string,
     req: OntologyRelationTypeInput,
   ): Promise<OntologyRelationType> {
-    return this.post(`/v1/ontology/schemas/${schemaId}/relation-types`, req);
+    return this.post(`/v1/ontology/schemas/${seg(schemaId)}/relation-types`, req);
   }
 
   async updateOntologyRelationType(
@@ -1174,7 +1192,7 @@ export class MindGraph {
     req: Partial<OntologyRelationTypeInput>,
   ): Promise<OntologyRelationType> {
     return this.patch(
-      `/v1/ontology/schemas/${schemaId}/relation-types/${typeId}`,
+      `/v1/ontology/schemas/${seg(schemaId)}/relation-types/${seg(typeId)}`,
       req,
     );
   }
@@ -1184,7 +1202,7 @@ export class MindGraph {
     typeId: string,
   ): Promise<OntologyRelationType> {
     return this.del(
-      `/v1/ontology/schemas/${schemaId}/relation-types/${typeId}`,
+      `/v1/ontology/schemas/${seg(schemaId)}/relation-types/${seg(typeId)}`,
     );
   }
 
@@ -1193,7 +1211,7 @@ export class MindGraph {
     schemaId: string,
   ): Promise<{ created: number }> {
     return this.post(
-      `/v1/ontology/schemas/${schemaId}/semantic-guidance/analyze`,
+      `/v1/ontology/schemas/${seg(schemaId)}/semantic-guidance/analyze`,
       {},
     );
   }
@@ -1202,7 +1220,7 @@ export class MindGraph {
   async auditOntologyDuplicates(
     schemaId: string,
   ): Promise<OntologyDuplicateAudit> {
-    return this.post(`/v1/ontology/schemas/${schemaId}/duplicates/audit`, {});
+    return this.post(`/v1/ontology/schemas/${seg(schemaId)}/duplicates/audit`, {});
   }
 
   // ---- Proposals ----
@@ -1229,34 +1247,34 @@ export class MindGraph {
   }
 
   async getOntologyProposal(id: string): Promise<OntologyProposal> {
-    return this.get(`/v1/ontology/proposals/${id}`);
+    return this.get(`/v1/ontology/proposals/${seg(id)}`);
   }
 
   async patchOntologyProposal(
     id: string,
     req: { edits: ProposalEdits },
   ): Promise<OntologyProposal> {
-    return this.patch(`/v1/ontology/proposals/${id}`, req);
+    return this.patch(`/v1/ontology/proposals/${seg(id)}`, req);
   }
 
   async approveOntologyProposal(
     id: string,
     opts?: { feedback?: string; edits?: ProposalEdits },
   ): Promise<OntologyProposal> {
-    return this.post(`/v1/ontology/proposals/${id}/approve`, opts ?? {});
+    return this.post(`/v1/ontology/proposals/${seg(id)}/approve`, opts ?? {});
   }
 
   async rejectOntologyProposal(
     id: string,
     reason?: string,
   ): Promise<OntologyProposal> {
-    return this.post(`/v1/ontology/proposals/${id}/reject`, { reason });
+    return this.post(`/v1/ontology/proposals/${seg(id)}/reject`, { reason });
   }
 
   async applyOntologyProposal(
     id: string,
   ): Promise<{ id: string; queued: boolean }> {
-    return this.post(`/v1/ontology/proposals/${id}/apply`, {});
+    return this.post(`/v1/ontology/proposals/${seg(id)}/apply`, {});
   }
 
   async batchApproveOntologyProposals(
@@ -1328,7 +1346,7 @@ export class MindGraph {
       if (binding.project_uid) query.set("project_uid", binding.project_uid);
     }
     const suffix = query.size > 0 ? `?${query.toString()}` : "";
-    return this.get(`/ontology/object/${uid}${suffix}`);
+    return this.get(`/ontology/object/${seg(uid)}${suffix}`);
   }
 
   async getDomainObjectContext(
@@ -1344,7 +1362,7 @@ export class MindGraph {
       if (binding.project_uid) query.set("project_uid", binding.project_uid);
     }
     const suffix = query.size > 0 ? `?${query.toString()}` : "";
-    return this.get(`/ontology/object/${uid}/context${suffix}`);
+    return this.get(`/ontology/object/${seg(uid)}/context${suffix}`);
   }
 
   async getDomainObjectHistory(
@@ -1358,7 +1376,7 @@ export class MindGraph {
       snapshot: unknown;
     }>;
   }> {
-    return this.get(`/ontology/object/${uid}/history`);
+    return this.get(`/ontology/object/${seg(uid)}/history`);
   }
 
   async listDomainObjects(opts: {

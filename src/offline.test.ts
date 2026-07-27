@@ -482,3 +482,48 @@ describe("known R4 divergences (documented, allowlisted)", () => {
     expect(sawSignal).toBe(false);
   });
 });
+
+describe("[C43] path-segment encoding", () => {
+  // Every uid/id below is caller-supplied, and in agent deployments the caller
+  // is frequently a model. Each test asserts the *escaped* URL exactly, so it
+  // fails if `seg()` is dropped from that call site — a `toContain` check on
+  // the encoded form would also pass on a raw path that merely happened to
+  // include the substring.
+  beforeEach(() => installFetchStub());
+
+  test("a traversal payload cannot climb out of its route", async () => {
+    await newClient().getNode("../../v1/orgs");
+    expect(captured[0].url).toBe(`${BASE}/node/..%2F..%2Fv1%2Forgs`);
+    // The decisive property: no additional real path separator reached the URL.
+    expect(new URL(captured[0].url).pathname).toBe("/node/..%2F..%2Fv1%2Forgs");
+  });
+
+  test("a uid cannot forge a query string", async () => {
+    await newClient().getJob("job-1?admin=true");
+    expect(captured[0].url).toBe(`${BASE}/jobs/job-1%3Fadmin%3Dtrue`);
+    expect(new URL(captured[0].url).search).toBe("");
+  });
+
+  test("a uid cannot truncate the path with a fragment", async () => {
+    await newClient().getAliases("uid-1#");
+    expect(captured[0].url).toBe(`${BASE}/aliases/uid-1%23`);
+    expect(new URL(captured[0].url).hash).toBe("");
+  });
+
+  test("every segment of a multi-segment path is encoded, not just the first", async () => {
+    await newClient().deleteOntologyObjectType("schema/../x", "type/../y");
+    expect(captured[0].url).toBe(
+      `${BASE}/v1/ontology/schemas/schema%2F..%2Fx/object-types/type%2F..%2Fy`,
+    );
+  });
+
+  test("legitimate query strings are still sent as query strings", async () => {
+    // The guard against over-applying `seg()`: encoding a whole assembled path
+    // would escape the `?` and turn the query into part of the last segment.
+    await newClient().listArticles({ search: "a b", article_type: "entity" });
+    const url = new URL(captured[0].url);
+    expect(url.pathname).toBe("/wiki/articles");
+    expect(url.searchParams.get("search")).toBe("a b");
+    expect(url.searchParams.get("article_type")).toBe("entity");
+  });
+});
