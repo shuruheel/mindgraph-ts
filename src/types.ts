@@ -241,7 +241,14 @@ export interface CaptureRequest {
 }
 
 export interface EntityRequest {
-  action: "create" | "alias" | "resolve" | "fuzzy_resolve" | "merge" | "relate";
+  action:
+    | "create"
+    | "resolve_identity"
+    | "alias"
+    | "resolve"
+    | "fuzzy_resolve"
+    | "merge"
+    | "relate";
   label?: string;
   text?: string;
   canonical_uid?: string;
@@ -254,6 +261,14 @@ export interface EntityRequest {
   edge_type?: string;
   props?: Record<string, unknown>;
   agent_id?: string;
+  /** Server-canonicalized exact identity. Values may contain only strings and integers. */
+  identity?: {
+    namespace: string;
+    key_version: 1;
+    key: unknown;
+  };
+  /** Explicit writable Project/repository/agent Space for an identity-backed create. */
+  identity_space_uid?: string;
 }
 
 export interface ArgumentRequest {
@@ -376,6 +391,9 @@ export interface SessionRequest {
   salience?: number;
   session_uid?: string;
   relevant_node_uids?: string[];
+  harness?: "claude-code" | "codex" | "generic";
+  harness_session_id?: string;
+  model?: string;
   props?: Record<string, unknown>;
   agent_id?: string;
 }
@@ -389,6 +407,10 @@ export interface DistillRequest {
   salience?: number;
   summarizes_uids?: string[];
   session_uid?: string;
+  work_uid?: string;
+  execution_uid?: string;
+  idempotency_key?: string;
+  supersedes_uid?: string;
   props?: Record<string, unknown>;
   agent_id?: string;
 }
@@ -403,8 +425,45 @@ export interface MemoryConfigRequest {
   agent_id?: string;
 }
 
+export interface MemorySyncRequest {
+  action: "scan" | "begin" | "record" | "finalize" | "status" | "abandon";
+  provider?: string;
+  repo_id?: string;
+  logical_path?: string;
+  content_hash?: string;
+  content?: string;
+  source_uid?: string;
+  execution_uid?: string;
+  assertion_fingerprint?: string;
+  planned_fingerprints?: string[];
+  current_fingerprints?: string[];
+  source_selector?: Record<string, unknown>;
+  capture_type?: "lesson" | "journal" | "claim" | "decision" | "risk";
+  label?: string;
+  summary?: string;
+  props?: Record<string, unknown>;
+  expected_execution_version?: number;
+  baseline_version?: number;
+  repo_space_uid?: string;
+  file_present?: boolean;
+  agent_id?: string;
+}
+
 export interface PlanRequest {
-  action: "create_task" | "create_plan" | "add_step" | "update_status" | "get_plan";
+  action:
+    | "create_task"
+    | "create_plan"
+    | "add_step"
+    | "update_status"
+    | "get_plan"
+    | "resume_work"
+    | "claim_task"
+    | "heartbeat"
+    | "start_iteration"
+    | "checkpoint_iteration"
+    | "block_task"
+    | "complete_task"
+    | "abandon_iteration";
   label?: string;
   summary?: string;
   confidence?: number;
@@ -412,16 +471,46 @@ export interface PlanRequest {
   goal_uid?: string;
   task_uid?: string;
   plan_uid?: string;
+  step_uid?: string;
+  execution_uid?: string;
+  session_uid?: string;
   depends_on_uids?: string[];
   target_uid?: string;
   status?: string;
+  task_status?: string;
+  step_status?: string;
+  execution_status?: "completed" | "failed" | "abandoned";
+  expected_version?: number;
+  lease_epoch?: number;
+  lease_ttl_secs?: number;
+  idempotency_key?: string;
+  allow_takeover?: boolean;
+  release_lease?: boolean;
+  override_reason?: string;
+  scope_uids?: string[];
+  limit?: number;
+  input_snapshot?: Record<string, unknown>;
+  output_snapshot?: Record<string, unknown>;
+  side_effects?: string[];
+  outcome?: string;
+  error?: string;
+  next_action?: string;
+  checkpoint_summary?: string;
+  test_summary?: string;
+  produces_node_uids?: string[];
   related_uids?: string[];
   props?: Record<string, unknown>;
   agent_id?: string;
 }
 
 export interface GovernanceRequest {
-  action: "create_policy" | "set_budget" | "request_approval" | "resolve_approval" | "get_pending";
+  action:
+    | "create_policy"
+    | "set_budget"
+    | "request_approval"
+    | "resolve_approval"
+    | "get_pending"
+    | "check";
   label?: string;
   summary?: string;
   confidence?: number;
@@ -430,8 +519,30 @@ export interface GovernanceRequest {
   approval_uid?: string;
   approved?: boolean;
   requires_plan_uid?: string;
+  act?: string;
+  target?: GovernanceTarget;
+  purpose?: string;
+  context?: Record<string, unknown>;
+  mode?: "permit_default" | "deny_default";
+  tier?: "native" | "checkpoint" | "advisory" | "dry_run";
   props?: Record<string, unknown>;
   agent_id?: string;
+}
+
+export interface GovernanceTarget {
+  node_uid?: string;
+  document_uid?: string;
+  node_type?: string;
+  ontology_class?: string;
+  tags?: string[];
+  space?: string;
+  classifications?: string[];
+  tool_name?: string;
+  tool_annotations?: string[];
+  execution_uid?: string;
+  action?: string;
+  mutability?: "read" | "write";
+  target_uids?: string[];
 }
 
 export interface ExecutionRequest {
@@ -442,10 +553,16 @@ export interface ExecutionRequest {
   salience?: number;
   plan_uid?: string;
   executor_uid?: string;
+  affordance_uid?: string;
   execution_uid?: string;
   produces_node_uid?: string;
   filter_plan_uid?: string;
   related_uids?: string[];
+  input_snapshot?: Record<string, unknown>;
+  output_snapshot?: Record<string, unknown>;
+  side_effects?: string[];
+  outcome?: string;
+  error?: string;
   props?: Record<string, unknown>;
   agent_id?: string;
 }

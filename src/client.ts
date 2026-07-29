@@ -20,6 +20,7 @@ import type {
   SessionRequest,
   DistillRequest,
   MemoryConfigRequest,
+  MemorySyncRequest,
   PlanRequest,
   GovernanceRequest,
   ExecutionRequest,
@@ -488,6 +489,10 @@ export class MindGraph {
 
   async memoryConfig(req: MemoryConfigRequest): Promise<unknown> {
     return this.post("/memory/config", req);
+  }
+
+  async memorySync(req: MemorySyncRequest): Promise<unknown> {
+    return this.post("/memory/sync", req);
   }
 
   // ---- Agent Layer ----
