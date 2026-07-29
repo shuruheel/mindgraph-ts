@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## 0.14.0 (2026-07-29)
+
+The coding-agent work substrate. **Compatibility**: the new work composites and
+identity actions require a server with the coding-agent work surface (newer
+than mindgraph 1.10.0 — at publish time available in a local build of
+`mindgraph-server` from main; MindGraph Cloud gains it with the next server
+deploy). Everything else works against server >= 1.10.0. Publish this package
+before `mindgraph-mcp` 0.14.0 (it calls `memorySync`).
+
+### Added
+
+- **Durable-work composites** on `plan()`: `resume_work` (deterministic bounded
+  work brief), `claim_task` / `heartbeat` (fenced leases), `start_iteration` /
+  `checkpoint_iteration` / `block_task` / `complete_task` / `abandon_iteration`
+  (idempotent material attempts), with the fencing fields `expected_version`,
+  `lease_epoch`, `idempotency_key`, and `execution_uid` forwarded on every
+  composite.
+- **External identity** on `entity()`: `identity: {namespace, key_version, key}`
+  + `identity_space_uid` for atomic find-or-create by canonical key, and the
+  `resolve_identity` action.
+- **`memorySync(req)`** — the memory-file sync surface (scan/begin/record/
+  finalize bookkeeping used by `mindgraph-mcp`'s `mindgraph_sync`).
+
 ## 0.13.0 (2026-07-23)
 
 Requires server >= 1.10.0 for everything below. This release is the compatibility
