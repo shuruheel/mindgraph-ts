@@ -153,10 +153,19 @@ export class MindGraph {
           res.status,
           parsed,
         );
-        // Retry on 503 (server warming up) with exponential backoff
+        // Retry on 503 (server warming up or tenant pool at capacity).
+        // When the server sends Retry-After (delta-seconds), honor it — the
+        // cloud's admission control sizes that hint so the total client wait
+        // stays bounded; blind exponential backoff on top of a server-side
+        // wait once composed into ~47 s worst-case hangs. Capped at 10 s per
+        // attempt so a malformed or hostile header cannot park the client.
         if (res.status === 503 && attempt < this.maxRetries) {
           lastError = err;
-          const delay = this.retryBackoffMs * 2 ** attempt;
+          const retryAfterSecs = Number(res.headers.get("retry-after"));
+          const delay =
+            Number.isFinite(retryAfterSecs) && retryAfterSecs > 0
+              ? Math.min(retryAfterSecs * 1000, 10_000)
+              : this.retryBackoffMs * 2 ** attempt;
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }

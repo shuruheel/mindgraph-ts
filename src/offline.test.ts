@@ -527,3 +527,82 @@ describe("[C43] path-segment encoding", () => {
     expect(url.searchParams.get("article_type")).toBe("entity");
   });
 });
+
+describe("[B3] 503 retry honors Retry-After", () => {
+  test("uses the server's Retry-After delta-seconds instead of backoff", async () => {
+    vi.useFakeTimers();
+    try {
+      const calls: number[] = [];
+      let attempt = 0;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          calls.push(Date.now());
+          attempt += 1;
+          if (attempt === 1) {
+            return new Response("busy", {
+              status: 503,
+              headers: { "Retry-After": "2" },
+            });
+          }
+          return new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }),
+      );
+      const promise = new MindGraph({
+        baseUrl: BASE,
+        apiKey: "mg_test_offline",
+      }).getNode("uid-1");
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(attempt).toBe(1); // still waiting on the server's hint
+      await vi.advanceTimersByTimeAsync(1);
+      await promise;
+      expect(attempt).toBe(2);
+      expect(calls[1] - calls[0]).toBe(2000);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("caps a hostile Retry-After at 10s and falls back to backoff without one", async () => {
+    vi.useFakeTimers();
+    try {
+      let attempt = 0;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => {
+          attempt += 1;
+          if (attempt === 1) {
+            return new Response("busy", {
+              status: 503,
+              headers: { "Retry-After": "86400" },
+            });
+          }
+          if (attempt === 2) {
+            // No Retry-After: legacy servers keep the old backoff path.
+            return new Response("busy", { status: 503 });
+          }
+          return new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }),
+      );
+      const promise = new MindGraph({
+        baseUrl: BASE,
+        apiKey: "mg_test_offline",
+      }).getNode("uid-1");
+      await vi.advanceTimersByTimeAsync(10_000); // hostile header capped
+      expect(attempt).toBe(2);
+      await vi.advanceTimersByTimeAsync(60_000); // default backoff for attempt 2
+      await promise;
+      expect(attempt).toBe(3);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+});
