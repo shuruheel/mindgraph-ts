@@ -195,6 +195,50 @@ export interface PlaceProps {
   attributes?: Record<string, unknown>;
 }
 
+export interface FiscalYearEnd {
+  month: number;
+  day: number;
+}
+
+export interface SeriesProps {
+  name: string;
+  description: string;
+  unit?: string | null;
+  temporality: "instant" | "period";
+  period_unit?: "year" | "quarter" | "month" | "week" | "day" | null;
+  fiscal_year_end: FiscalYearEnd;
+  value_kind: string;
+  default_source_uid?: string | null;
+  origin: "ingest" | "connector";
+  binding_uid?: string | null;
+  binding_name?: string | null;
+  n_points: number;
+  min_t?: number | null;
+  max_t?: number | null;
+  latest_t?: number | null;
+  latest_value?: number | null;
+  latest_period_label?: string | null;
+}
+
+export type SeriesNode = Omit<GraphNode, "props"> & { props: SeriesProps };
+
+export interface MeasurementPoint {
+  /** Microseconds since the Unix epoch (UTC). */
+  t: number;
+  value: number;
+  scale_applied?: number;
+  period_start?: number | null;
+  period_label?: string | null;
+  source_uid?: string | null;
+  source_ref?: string | null;
+}
+
+export interface AggregatePoint {
+  /** UTC bucket start, microseconds since the Unix epoch. */
+  t: number;
+  value: number | null;
+}
+
 // ---- Epistemic layer prop types ----
 
 export interface ClaimProps {
@@ -269,6 +313,88 @@ export interface EntityRequest {
   };
   /** Explicit writable Project/repository/agent Space for an identity-backed create. */
   identity_space_uid?: string;
+}
+
+export type SeriesRequest =
+  | {
+      action: "create";
+      entity_uid: string;
+      name: string;
+      description?: string;
+      unit?: string;
+      temporality: "instant" | "period";
+      period_unit?: "year" | "quarter" | "month" | "week" | "day";
+      fiscal_year_end?: FiscalYearEnd;
+      value_kind?: string;
+      default_source_uid?: string;
+      origin?: "ingest" | "connector";
+      space_uid?: string;
+      agent_id?: string;
+    }
+  | { action: "append"; series_uid: string; points: MeasurementPoint[]; agent_id?: string }
+  | { action: "window"; series_uid: string; from: number; to: number; cursor?: number; limit?: number }
+  | {
+      action: "aggregate";
+      series_uid: string;
+      from: number;
+      to: number;
+      bucket: "year" | "quarter" | "month" | "week" | "day" | "hour";
+      agg: "sum" | "mean" | "min" | "max" | "count" | "std_dev" | "last";
+      fill?: "none" | "null" | "prev";
+    }
+  | { action: "latest"; series_uid: string }
+  | { action: "list_for_entity"; entity_uid: string }
+  | { action: "delete_series"; series_uid: string; reason?: string; agent_id?: string };
+
+export interface CreateSeriesResponse {
+  created: boolean;
+  series: SeriesNode;
+}
+
+export interface AppendSeriesResponse {
+  series_uid: string;
+  appended: number;
+  stats: Pick<SeriesProps, "n_points" | "min_t" | "max_t" | "latest_t" | "latest_value">;
+}
+
+export interface SeriesWindowResponse {
+  series_uid: string;
+  from: number;
+  to: number;
+  points: MeasurementPoint[];
+  next_cursor: number | null;
+}
+
+export interface SeriesAggregateResponse {
+  series_uid: string;
+  from: number;
+  to: number;
+  bucket: string;
+  agg: string;
+  fill: string;
+  estimated_scanned_points: number;
+  points: AggregatePoint[];
+}
+
+export interface SeriesLatestResponse {
+  series_uid: string;
+  n_points: number;
+  min_t: number | null;
+  max_t: number | null;
+  latest_t: number | null;
+  latest_value: number | null;
+  latest_period_label: string | null;
+}
+
+export interface ListSeriesResponse {
+  entity_uid: string;
+  series: SeriesNode[];
+}
+
+export interface DeleteSeriesResponse {
+  series_uid: string;
+  deleted: boolean;
+  tombstoned_points: number;
 }
 
 export interface ArgumentRequest {
@@ -871,6 +997,31 @@ export interface BelievedBy {
   confidence: number | null;
 }
 
+export interface SeriesContextAnnotation {
+  uid: string;
+  name: string;
+  unit: string | null;
+  temporality: string;
+  origin: "ingest" | "connector" | string;
+  binding_name?: string | null;
+  /** Equivalent parallel Series; connector-backed entries sort first. */
+  same_metric_as?: Array<{
+    uid: string;
+    name: string;
+    origin: "ingest" | "connector" | string;
+    binding_name?: string | null;
+  }>;
+  /** Omitted for an empty Series (unknown is not zero). */
+  n_points?: number;
+  first_t?: number | null;
+  last_t?: number | null;
+  latest?: {
+    value: number | null;
+    t: number | null;
+    period_label: string | null;
+  };
+}
+
 export interface RetrieveContextResponse {
   articles?: ArticleResult[];
   chunks?: {
@@ -893,6 +1044,7 @@ export interface RetrieveContextResponse {
       }[];
       source_chunks?: SourceChunk[];
       believed_by?: BelievedBy[];
+      series?: SeriesContextAnnotation[];
       /** This node has been replaced by a newer value (Supersedes edge). */
       superseded?: boolean;
       /** UID of the node that superseded this one. */
@@ -1375,6 +1527,42 @@ export interface BackingSync {
   schedule?: string | null;
 }
 
+export interface SeriesBacking {
+  connection_ref: string;
+  table: string;
+  entity_key_column: string;
+  time_column: string;
+  value_column: string;
+  filter?: BackingFilter;
+  cursor_column?: string;
+}
+
+export interface OntologySeriesBinding {
+  id: string;
+  schema_id: string;
+  org_id: string;
+  name: string;
+  entity_type: string;
+  unit?: string | null;
+  temporality: "instant" | "period";
+  period_unit?: "year" | "half" | "quarter" | "month" | "week" | "day" | null;
+  fiscal_year_end: { month: number; day: number };
+  backing: SeriesBacking;
+  cursor_value?: string | null;
+  last_domain_time?: string | null;
+  reconcile_periods: number;
+  last_source_keys: string[];
+  last_reconciliation?: {
+    deleted_source_keys: string[];
+    deleted_count: number;
+    policy: "rows_retained";
+    completed_at: string;
+  } | null;
+  status: "active" | "archived";
+  created_at: string;
+  updated_at: string;
+}
+
 /** Datasource binding for a relation type (FK column or M:M join table). */
 export type RelationBacking =
   | {
@@ -1472,6 +1660,7 @@ export interface OntologyRelationType {
 export interface OntologySchemaDetail extends OntologySchema {
   object_types: OntologyObjectType[];
   relation_types: OntologyRelationType[];
+  series_bindings: OntologySeriesBinding[];
 }
 
 /** A generated read-only tool descriptor (from `listOntologyTools`). */

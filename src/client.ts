@@ -10,6 +10,14 @@ import type {
   PathStep,
   CaptureRequest,
   EntityRequest,
+  SeriesRequest,
+  CreateSeriesResponse,
+  AppendSeriesResponse,
+  SeriesWindowResponse,
+  SeriesAggregateResponse,
+  SeriesLatestResponse,
+  ListSeriesResponse,
+  DeleteSeriesResponse,
   ArgumentRequest,
   InquiryRequest,
   StructureRequest,
@@ -46,6 +54,8 @@ import type {
   // Ontology layer
   OntologySchema,
   OntologySchemaDetail,
+  OntologySeriesBinding,
+  SeriesBacking,
   OntologyObjectType,
   OntologyObjectTypeInput,
   OntologyRelationType,
@@ -229,6 +239,56 @@ export class MindGraph {
 
   async entity(req: EntityRequest): Promise<unknown> {
     return this.post("/reality/entity", req);
+  }
+
+  async series(req: SeriesRequest): Promise<unknown> {
+    return this.post("/reality/series", req);
+  }
+
+  async createSeries(
+    req: Omit<Extract<SeriesRequest, { action: "create" }>, "action">,
+  ): Promise<CreateSeriesResponse> {
+    return this.post("/reality/series", { action: "create", ...req });
+  }
+
+  async appendSeries(
+    req: Omit<Extract<SeriesRequest, { action: "append" }>, "action">,
+  ): Promise<AppendSeriesResponse> {
+    return this.post("/reality/series", { action: "append", ...req });
+  }
+
+  async seriesWindow(
+    req: Omit<Extract<SeriesRequest, { action: "window" }>, "action">,
+  ): Promise<SeriesWindowResponse> {
+    return this.post("/reality/series", { action: "window", ...req });
+  }
+
+  async aggregateSeries(
+    req: Omit<Extract<SeriesRequest, { action: "aggregate" }>, "action">,
+  ): Promise<SeriesAggregateResponse> {
+    return this.post("/reality/series", { action: "aggregate", ...req });
+  }
+
+  async latestSeries(seriesUid: string): Promise<SeriesLatestResponse> {
+    return this.post("/reality/series", { action: "latest", series_uid: seriesUid });
+  }
+
+  async listSeriesForEntity(entityUid: string): Promise<ListSeriesResponse> {
+    return this.post("/reality/series", {
+      action: "list_for_entity",
+      entity_uid: entityUid,
+    });
+  }
+
+  async deleteSeries(
+    seriesUid: string,
+    options?: { reason?: string; agent_id?: string },
+  ): Promise<DeleteSeriesResponse> {
+    return this.post("/reality/series", {
+      action: "delete_series",
+      series_uid: seriesUid,
+      ...options,
+    });
   }
 
   /** Convenience: create or find an entity by label. */
@@ -1119,6 +1179,38 @@ export class MindGraph {
 
   async getOntologySchema(id: string): Promise<OntologySchemaDetail> {
     return this.get(`/v1/ontology/schemas/${seg(id)}`);
+  }
+
+  async createOntologySeriesBinding(
+    schemaId: string,
+    request: {
+      name: string;
+      entity_type: string;
+      unit?: string;
+      temporality?: "instant" | "period";
+      period_unit?: "year" | "half" | "quarter" | "month" | "week" | "day";
+      fiscal_year_end?: { month: number; day: number };
+      backing: SeriesBacking;
+      reconcile_periods?: number;
+    },
+  ): Promise<OntologySeriesBinding> {
+    return this.post(`/v1/ontology/schemas/${seg(schemaId)}/series-bindings`, request);
+  }
+
+  async syncOntologySeriesBinding(
+    bindingId: string,
+    mode?: "incremental" | "full",
+  ): Promise<{ sync_job_id: string }> {
+    return this.post(
+      `/v1/ontology/series-bindings/${seg(bindingId)}/sync`,
+      mode ? { mode } : {},
+    );
+  }
+
+  async archiveOntologySeriesBinding(schemaId: string, bindingId: string): Promise<void> {
+    return this.del(
+      `/v1/ontology/schemas/${seg(schemaId)}/series-bindings/${seg(bindingId)}`,
+    );
   }
 
   async createOntologySchema(

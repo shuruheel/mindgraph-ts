@@ -93,6 +93,32 @@ afterEach(() => {
 });
 
 describe("ontology review and audit routes", () => {
+  test("exposes Series binding create, sync, and archive routes", async () => {
+    installFetchStub({ sync_job_id: "job-1" });
+    const mg = newClient();
+    await mg.createOntologySeriesBinding("schema/1", {
+      name: "Revenue",
+      entity_type: "Company",
+      temporality: "period",
+      period_unit: "quarter",
+      backing: {
+        connection_ref: "connection-1",
+        table: "facts.revenue",
+        entity_key_column: "company_id",
+        time_column: "period_end",
+        value_column: "value",
+      },
+    });
+    await mg.syncOntologySeriesBinding("binding/1", "full");
+    await mg.archiveOntologySeriesBinding("schema/1", "binding/1");
+    expect(captured.map((request) => [request.method, new URL(request.url).pathname])).toEqual([
+      ["POST", "/v1/ontology/schemas/schema%2F1/series-bindings"],
+      ["POST", "/v1/ontology/series-bindings/binding%2F1/sync"],
+      ["DELETE", "/v1/ontology/schemas/schema%2F1/series-bindings/binding%2F1"],
+    ]);
+    expect(captured[1].body).toEqual({ mode: "full" });
+  });
+
   test("supports run-scoped semantic proposal filtering", async () => {
     installFetchStub({ items: [], limit: 50, offset: 0 });
     const mg = newClient();
@@ -330,6 +356,21 @@ describe("cognitive method wire-contract conformance", () => {
 // Conventions"): traverse path uses start_uid + end_uid (NOT from_uid/to_uid).
 // ---------------------------------------------------------------------------
 describe("field-name conventions", () => {
+  test("series helpers use the single action-dispatch endpoint", async () => {
+    installFetchStub();
+    const mg = newClient();
+    await mg.appendSeries({
+      series_uid: "series-1",
+      points: [{ t: 1_000_000, value: 42 }],
+    });
+    expect(captured[0].url).toBe(`${BASE}/reality/series`);
+    expect(captured[0].body).toEqual({
+      action: "append",
+      series_uid: "series-1",
+      points: [{ t: 1_000_000, value: 42 }],
+    });
+  });
+
   test("traverse path uses start_uid + end_uid (not from_uid/to_uid)", async () => {
     installFetchStub();
     const mg = newClient();
