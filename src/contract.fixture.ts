@@ -44,6 +44,15 @@ export const ENDPOINT_ACTIONS: Record<string, readonly string[]> = {
     "merge",
     "relate",
   ],
+  "/reality/series": [
+    "create",
+    "append",
+    "window",
+    "aggregate",
+    "latest",
+    "list_for_entity",
+    "delete_series",
+  ],
   "/epistemic/inquiry": [
     "hypothesis",
     "theory",
