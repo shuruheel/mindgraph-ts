@@ -2,7 +2,31 @@
 
 ## Unreleased
 
+## 0.15.0 (2026-08-17)
+
+This release exposes the dense time-series and governed skill-capture surfaces
+now available in MindGraph Cloud. The new methods require a server that
+implements `/reality/series`, ontology Series bindings, and
+`output_type="skill"` on `/memory/distill`; existing methods remain
+backward compatible.
+
+### Added
+
+- **Typed time series.** `series()` plus convenience methods for create,
+  append, keyset-window, aggregate, latest, list-for-entity, batch-latest,
+  batch-aggregate, and delete actions. Response types preserve period labels,
+  source references, cached statistics, and explicit empty-Series semantics.
+- **Series-aware context and ontology bindings.** Retrieval results can carry
+  bounded Series annotations, including equivalent `same_metric_as` sources.
+  Schema clients can create, synchronize, inspect, and archive SQL-backed
+  Series bindings.
+- **Governed skill distillation.** `distill()` now has a discriminated
+  `output_type: "skill"` request with typed name, trigger description,
+  SKILL.md content, and optional license. The call creates a review candidate;
+  it does not publish a skill.
+
 ### Changed
+
 - 503 retries honor a positive `Retry-After` delta-seconds header (capped at
   10 s), falling back to the existing exponential backoff when absent. Client
   prerequisite for MindGraph Cloud's tenant-pool admission control — this

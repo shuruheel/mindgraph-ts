@@ -52,6 +52,10 @@ new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
 |--------|-------------|
 | `capture(req)` | Capture a source, snippet, or observation |
 | `entity(req)` | Create, alias, resolve, or merge entities |
+| `series(req)` | Call the typed time-series action surface directly |
+| `createSeries` / `appendSeries` / `seriesWindow` | Create a Series, append sourced points, and page through a bounded time window |
+| `aggregateSeries` / `latestSeries` / `listSeriesForEntity` | Read bounded aggregates, cached latest values, and an entity's Series |
+| `batchLatestSeries` / `batchAggregateSeries` / `deleteSeries` | Compare Series across entities or tombstone a Series and its points |
 | `findOrCreateEntity(label, props?, agentId?)` | Convenience: create or find an entity by label (generic fallback) |
 | `findOrCreatePerson(label, props?, agentId?)` | Find or create a Person entity |
 | `findOrCreateOrganization(label, props?, agentId?)` | Find or create an Organization entity |
@@ -106,6 +110,22 @@ const entity = await graph.findOrCreateEntity("Some Entity");
 | `distill(req)` | Create a Summary, Lesson, or governed Skill candidate with source provenance |
 | `memoryConfig(req)` | Set/get preferences and memory policies |
 
+`output_type: "skill"` requires caller-authored SKILL.md content and at
+least one provenance field. It always creates a candidate for review:
+
+```typescript
+await graph.distill({
+  label: "Recover a malformed import",
+  output_type: "skill",
+  work_uid: "work_import_42",
+  props: {
+    name: "recover-malformed-import",
+    description: "Use after a spreadsheet import fails schema validation.",
+    content: "# Recovery\n\nValidate headers, normalize dates, then retry.",
+  },
+});
+```
+
 ### Agent Layer
 
 | Method | Description |
@@ -139,6 +159,7 @@ Define typed domain objects (Customer, Order, Contract…) as a semantic contrac
 |--------|-------------|
 | `proposeOntologySchema(req)` | Draft a schema from a description (+ optional sample docs); returns `{ schema_id, job_id }` |
 | `activateOntologySchema(id)` / `getOntologySchema(id)` / `listOntologySchemas()` | Schema lifecycle |
+| `createOntologySeriesBinding` / `syncOntologySeriesBinding` / `archiveOntologySeriesBinding` | Manage SQL-backed dense-measurement bindings |
 | `listOntologyProposals(opts?)` / `approveOntologyProposal(id)` / `rejectOntologyProposal(id)` | Review extracted-object proposals |
 | `queryOntology({ query, include_cognitive_context })` | Typed retrieval with the cognitive overlay fused in |
 | `listOntologyTools()` | The generated read-tool manifest (`search_/get_/summarize_<obj>`) the MCP server renders |
