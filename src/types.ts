@@ -570,10 +570,19 @@ export interface SessionRequest {
   agent_id?: string;
 }
 
-export interface DistillRequest {
+/** Caller-authored content for a governed skill candidate. */
+export interface SkillDistillProps {
+  /** Stable agentskills.io identifier: 1-64 lowercase letters, digits, or hyphens. */
+  name: string;
+  /** Human-readable trigger guidance (1-1024 characters; XML tags are rejected). */
+  description: string;
+  /** Complete SKILL.md body, capped by the server at 64 KiB. */
+  content: string;
+  license?: string;
+}
+
+interface DistillRequestBase {
   label: string;
-  /** Defaults to "summary" for backward compatibility. */
-  output_type?: "summary" | "lesson";
   summary?: string;
   confidence?: number;
   salience?: number;
@@ -583,9 +592,23 @@ export interface DistillRequest {
   execution_uid?: string;
   idempotency_key?: string;
   supersedes_uid?: string;
-  props?: Record<string, unknown>;
   agent_id?: string;
 }
+
+interface SummaryOrLessonDistillRequest extends DistillRequestBase {
+  /** Defaults to "summary" for backward compatibility. */
+  output_type?: "summary" | "lesson";
+  props?: Record<string, unknown>;
+}
+
+export interface SkillDistillRequest extends DistillRequestBase {
+  output_type: "skill";
+  props: SkillDistillProps;
+}
+
+export type DistillRequest =
+  | SummaryOrLessonDistillRequest
+  | SkillDistillRequest;
 
 export interface MemoryConfigRequest {
   action: "set_preference" | "get_preferences" | "set_policy" | "get_policies";

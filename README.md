@@ -103,7 +103,7 @@ const entity = await graph.findOrCreateEntity("Some Entity");
 |--------|-------------|
 | `session(req)` | Open a session, record traces, or close a session |
 | `journal(label, props, options?)` | Record a journal entry linked to an optional session |
-| `distill(req)` | Create a Summary (default) or Lesson with source provenance |
+| `distill(req)` | Create a Summary, Lesson, or governed Skill candidate with source provenance |
 | `memoryConfig(req)` | Set/get preferences and memory policies |
 
 ### Agent Layer

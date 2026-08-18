@@ -87,6 +87,45 @@ describe("corpus project wire contract", () => {
   });
 });
 
+describe("skill distill wire contract", () => {
+  test("sends caller-authored skill props and provenance unchanged", async () => {
+    installFetchStub({ uid: "skill-1", status: "candidate" });
+    const mg = newClient();
+
+    await mg.distill({
+      label: "Capture parser recovery",
+      output_type: "skill",
+      summary: "Reusable parser recovery procedure",
+      session_uid: "session-1",
+      summarizes_uids: ["project-1"],
+      props: {
+        name: "parser-recovery",
+        description: "Recover a parser after malformed input.",
+        content: "# Parser recovery\n\nNormalize input, then retry.",
+        license: "MIT",
+      },
+    });
+
+    expect(captured[0]).toMatchObject({
+      method: "POST",
+      body: {
+        label: "Capture parser recovery",
+        output_type: "skill",
+        summary: "Reusable parser recovery procedure",
+        session_uid: "session-1",
+        summarizes_uids: ["project-1"],
+        props: {
+          name: "parser-recovery",
+          description: "Recover a parser after malformed input.",
+          content: "# Parser recovery\n\nNormalize input, then retry.",
+          license: "MIT",
+        },
+      },
+    });
+    expect(new URL(captured[0].url).pathname).toBe("/memory/distill");
+  });
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
