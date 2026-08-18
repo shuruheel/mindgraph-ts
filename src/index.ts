@@ -39,6 +39,8 @@ export type {
   RiskRequest,
   SessionRequest,
   DistillRequest,
+  SkillDistillProps,
+  SkillDistillRequest,
   MemoryConfigRequest,
   MemorySyncRequest,
   PlanRequest,
