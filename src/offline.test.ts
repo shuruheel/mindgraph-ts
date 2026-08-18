@@ -369,6 +369,35 @@ describe("field-name conventions", () => {
       series_uid: "series-1",
       points: [{ t: 1_000_000, value: 42 }],
     });
+
+    captured.length = 0;
+    await mg.batchLatestSeries(["lead-1", "lead-2"], {
+      series_names: ["ARR"],
+      project_uid: "project-1",
+    });
+    expect(captured[0].body).toEqual({
+      action: "batch_latest",
+      entity_uids: ["lead-1", "lead-2"],
+      series_names: ["ARR"],
+      project_uid: "project-1",
+    });
+
+    captured.length = 0;
+    await mg.batchAggregateSeries({
+      series_uids: ["series-1", "series-2"],
+      from: 1,
+      to: 2,
+      bucket: "quarter",
+      agg: "mean",
+    });
+    expect(captured[0].body).toEqual({
+      action: "batch_aggregate",
+      series_uids: ["series-1", "series-2"],
+      from: 1,
+      to: 2,
+      bucket: "quarter",
+      agg: "mean",
+    });
   });
 
   test("traverse path uses start_uid + end_uid (not from_uid/to_uid)", async () => {

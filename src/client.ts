@@ -17,6 +17,8 @@ import type {
   SeriesAggregateResponse,
   SeriesLatestResponse,
   ListSeriesResponse,
+  BatchLatestSeriesResponse,
+  BatchAggregateSeriesResponse,
   DeleteSeriesResponse,
   ArgumentRequest,
   InquiryRequest,
@@ -269,15 +271,43 @@ export class MindGraph {
     return this.post("/reality/series", { action: "aggregate", ...req });
   }
 
-  async latestSeries(seriesUid: string): Promise<SeriesLatestResponse> {
-    return this.post("/reality/series", { action: "latest", series_uid: seriesUid });
+  async latestSeries(
+    seriesUid: string,
+    options?: { project_uid?: string },
+  ): Promise<SeriesLatestResponse> {
+    return this.post("/reality/series", {
+      action: "latest",
+      series_uid: seriesUid,
+      ...options,
+    });
   }
 
-  async listSeriesForEntity(entityUid: string): Promise<ListSeriesResponse> {
+  async listSeriesForEntity(
+    entityUid: string,
+    options?: { project_uid?: string },
+  ): Promise<ListSeriesResponse> {
     return this.post("/reality/series", {
       action: "list_for_entity",
       entity_uid: entityUid,
+      ...options,
     });
+  }
+
+  async batchLatestSeries(
+    entityUids: string[],
+    options?: { series_names?: string[]; project_uid?: string },
+  ): Promise<BatchLatestSeriesResponse> {
+    return this.post("/reality/series", {
+      action: "batch_latest",
+      entity_uids: entityUids,
+      ...options,
+    });
+  }
+
+  async batchAggregateSeries(
+    req: Omit<Extract<SeriesRequest, { action: "batch_aggregate" }>, "action">,
+  ): Promise<BatchAggregateSeriesResponse> {
+    return this.post("/reality/series", { action: "batch_aggregate", ...req });
   }
 
   async deleteSeries(

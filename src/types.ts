@@ -332,7 +332,7 @@ export type SeriesRequest =
       agent_id?: string;
     }
   | { action: "append"; series_uid: string; points: MeasurementPoint[]; agent_id?: string }
-  | { action: "window"; series_uid: string; from: number; to: number; cursor?: number; limit?: number }
+  | { action: "window"; series_uid: string; from: number; to: number; cursor?: number; limit?: number; project_uid?: string }
   | {
       action: "aggregate";
       series_uid: string;
@@ -341,9 +341,21 @@ export type SeriesRequest =
       bucket: "year" | "quarter" | "month" | "week" | "day" | "hour";
       agg: "sum" | "mean" | "min" | "max" | "count" | "std_dev" | "last";
       fill?: "none" | "null" | "prev";
+      project_uid?: string;
     }
-  | { action: "latest"; series_uid: string }
-  | { action: "list_for_entity"; entity_uid: string }
+  | { action: "latest"; series_uid: string; project_uid?: string }
+  | { action: "list_for_entity"; entity_uid: string; project_uid?: string }
+  | { action: "batch_latest"; entity_uids: string[]; series_names?: string[]; project_uid?: string }
+  | {
+      action: "batch_aggregate";
+      series_uids: string[];
+      from: number;
+      to: number;
+      bucket: "year" | "quarter" | "month" | "week" | "day" | "hour";
+      agg: "sum" | "mean" | "min" | "max" | "count" | "std_dev" | "last";
+      fill?: "none" | "null" | "prev";
+      project_uid?: string;
+    }
   | { action: "delete_series"; series_uid: string; reason?: string; agent_id?: string };
 
 export interface CreateSeriesResponse {
@@ -389,6 +401,40 @@ export interface SeriesLatestResponse {
 export interface ListSeriesResponse {
   entity_uid: string;
   series: SeriesNode[];
+}
+
+export interface BatchLatestSeriesResponse {
+  entity_count: number;
+  series_names: string[];
+  rows: Array<{
+    entity_uid: string;
+    series_uid: string;
+    name: string;
+    unit: string | null;
+    temporality: string;
+    period_unit: string | null;
+    n_points: number;
+    latest_t: number | null;
+    latest_value: number | null;
+    latest_period_label: string | null;
+  }>;
+  coverage_complete: boolean;
+}
+
+export interface BatchAggregateSeriesResponse {
+  from: number;
+  to: number;
+  bucket: string;
+  agg: string;
+  fill: string;
+  estimated_scanned_points: number;
+  series: Array<{
+    series_uid: string;
+    name: string;
+    unit: string | null;
+    estimated_scanned_points: number;
+    points: AggregatePoint[];
+  }>;
 }
 
 export interface DeleteSeriesResponse {
