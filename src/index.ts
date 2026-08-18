@@ -27,6 +27,8 @@ export type {
   SeriesAggregateResponse,
   SeriesLatestResponse,
   ListSeriesResponse,
+  BatchLatestSeriesResponse,
+  BatchAggregateSeriesResponse,
   DeleteSeriesResponse,
   ArgumentRequest,
   InquiryRequest,
