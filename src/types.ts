@@ -1871,6 +1871,8 @@ export interface ProposeOntologySchemaRequest {
     | "healthcare"
     | "supply_chain"
     | "research_intel"
+    | "product_intelligence"
+    | "investment_dealflow"
     | "custom";
   source_uids?: string[];
   source_documents?: Array<{ content: string; title?: string }>;
@@ -1923,7 +1925,16 @@ export interface StructuredOntologyQueryRequest {
   where?: OntologyQueryPredicate[];
   include?: { provenance?: boolean; related?: string[] };
   page?: { limit?: number; offset?: number };
-  aggregate?: { op: "count" | "customer_demand_rank"; group_by?: string };
+  aggregate?: {
+    op: "count" | "customer_demand_rank" | "weighted_scorecard";
+    group_by?: string;
+    criteria?: Array<{
+      field: string;
+      weight: number;
+      direction: "higher_is_better" | "lower_is_better";
+    }>;
+    missing?: "exclude_candidate" | "zero";
+  };
 }
 
 export interface StructuredOntologyQueryResponse {
@@ -2026,8 +2037,29 @@ export interface CreateDomainObjectRequest {
   aliases?: string[];
   identity?: Record<string, unknown>;
   confidence?: number;
-  /** Skip the same-type + same-name duplicate guard (default false). */
+  /** Skip the same-type + same-name guard. Schema identity is still enforced. */
   allow_duplicate?: boolean;
+}
+
+export interface UpdateDomainObjectRequest {
+  canonical_name?: string;
+  /** Field patch. Use `unset_fields` rather than null to remove a field. */
+  fields?: Record<string, unknown>;
+  unset_fields?: string[];
+  /** Additive aliases; existing aliases and source provenance are preserved. */
+  aliases?: string[];
+  confidence?: number;
+  /** Optimistic-concurrency guard from the current object's `version`. */
+  expected_version: number;
+  /** Human-readable reason retained in the ontology proposal audit ledger. */
+  reason: string;
+}
+
+export interface DomainObjectMutationResponse {
+  uid: string;
+  proposal_id: string;
+  /** Present on update responses. */
+  version?: number;
 }
 
 export interface ExtractOntologyRequest {

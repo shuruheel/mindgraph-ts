@@ -135,4 +135,8 @@ export type {
   StructuredOntologyQueryResponse,
   RelatedDomainObjectsRequest,
   OntologyToolDescriptor,
+  CreateDomainObjectRequest,
+  UpdateDomainObjectRequest,
+  DomainObjectMutationResponse,
+  DomainObject,
 } from "./types.js";

@@ -77,6 +77,8 @@ import type {
   OntologyToolDescriptor,
   LinkDomainObjectsRequest,
   CreateDomainObjectRequest,
+  UpdateDomainObjectRequest,
+  DomainObjectMutationResponse,
   ExtractOntologyRequest,
   DomainObject,
 } from "./types.js";
@@ -1582,12 +1584,24 @@ export class MindGraph {
   /**
    * Create a domain object by hand (auto-approved). Returns the created node
    * uid + the audit proposal id. Throws 409 if an object of the same type +
-   * canonical_name already exists, unless `allow_duplicate` is set.
+   * canonical_name already exists, unless `allow_duplicate` is set. The
+   * schema's identity key is always enforced.
    */
   async createDomainObject(
     req: CreateDomainObjectRequest,
-  ): Promise<{ uid: string; proposal_id: string }> {
+  ): Promise<DomainObjectMutationResponse> {
     return this.post("/v1/ontology/objects", req);
+  }
+
+  /**
+   * Schema-validated authored update with optimistic concurrency. Identity
+   * fields are immutable; create and explicitly merge when identity changes.
+   */
+  async updateDomainObject(
+    uid: string,
+    req: UpdateDomainObjectRequest,
+  ): Promise<DomainObjectMutationResponse> {
+    return this.patch(`/v1/ontology/objects/${seg(uid)}`, req);
   }
 
   async linkDomainObjects(
