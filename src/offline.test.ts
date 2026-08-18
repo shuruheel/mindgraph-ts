@@ -132,6 +132,22 @@ afterEach(() => {
 });
 
 describe("ontology review and audit routes", () => {
+  test("supports the investment deal-flow schema template", async () => {
+    installFetchStub({ schema_id: "schema-1", job_id: "job-1" });
+    const mg = newClient();
+    await mg.proposeOntologySchema({
+      template_hint: "investment_dealflow",
+      target_use_case: "Govern an external fund pipeline and its diligence evidence",
+    });
+    expect(captured[0]).toMatchObject({
+      method: "POST",
+      body: {
+        template_hint: "investment_dealflow",
+        target_use_case: "Govern an external fund pipeline and its diligence evidence",
+      },
+    });
+  });
+
   test("exposes Series binding create, sync, and archive routes", async () => {
     installFetchStub({ sync_job_id: "job-1" });
     const mg = newClient();
@@ -186,6 +202,44 @@ describe("ontology review and audit routes", () => {
 });
 
 describe("graph-aware ontology retrieval wire contract", () => {
+  test("creates and optimistically updates authored domain objects", async () => {
+    installFetchStub({ uid: "lead-1", proposal_id: "proposal-1", version: 3 });
+    const mg = newClient();
+    await mg.createDomainObject({
+      schema_id: "schema-a",
+      object_type: "InvestmentLead",
+      canonical_name: "Acme — Series A",
+      fields: { deal_id: "deal-1", stage: "screening" },
+    });
+    await mg.updateDomainObject("lead/1", {
+      fields: { stage: "diligence", team_score: 8 },
+      unset_fields: ["risk_score"],
+      expected_version: 2,
+      reason: "Partner meeting completed",
+    });
+
+    expect(captured[0]).toMatchObject({
+      method: "POST",
+      body: {
+        schema_id: "schema-a",
+        object_type: "InvestmentLead",
+        canonical_name: "Acme — Series A",
+        fields: { deal_id: "deal-1", stage: "screening" },
+      },
+    });
+    expect(new URL(captured[0].url).pathname).toBe("/v1/ontology/objects");
+    expect(captured[1]).toMatchObject({
+      method: "PATCH",
+      body: {
+        fields: { stage: "diligence", team_score: 8 },
+        unset_fields: ["risk_score"],
+        expected_version: 2,
+        reason: "Partner meeting completed",
+      },
+    });
+    expect(new URL(captured[1].url).pathname).toBe("/v1/ontology/objects/lead%2F1");
+  });
+
   test("carries project scope through the legacy ontology query", async () => {
     installFetchStub({
       objects: [],
@@ -222,6 +276,25 @@ describe("graph-aware ontology retrieval wire contract", () => {
     await mg.queryDomainStructured(request);
     expect(captured[0].method).toBe("POST");
     expect(new URL(captured[0].url).pathname).toBe("/ontology/query/structured");
+    expect(captured[0].body).toEqual(request);
+  });
+
+  test("sends deterministic weighted scorecard criteria unchanged", async () => {
+    installFetchStub({ rows: [], aggregate: { ranking: [] }, total_count: 0 });
+    const mg = newClient();
+    const request = {
+      schema_id: "schema-a",
+      select: "InvestmentLead",
+      aggregate: {
+        op: "weighted_scorecard" as const,
+        criteria: [
+          { field: "team_score", weight: 2, direction: "higher_is_better" as const },
+          { field: "risk_score", weight: 1, direction: "lower_is_better" as const },
+        ],
+        missing: "exclude_candidate" as const,
+      },
+    };
+    await mg.queryDomainStructured(request);
     expect(captured[0].body).toEqual(request);
   });
 
