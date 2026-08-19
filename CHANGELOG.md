@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## 0.15.1 (2026-08-19)
+
+Patch release for the authored ontology-object contract used by the investment
+deal-flow workflow. These methods require the corresponding MindGraph Cloud
+ontology mutation and weighted-scorecard endpoints; existing methods remain
+backward compatible.
+
+### Added
+
+- `updateDomainObject(uid, request)` for schema-validated authored updates with
+  optimistic concurrency, explicit unset semantics, and an audit reason.
+- Typed `investment_dealflow` schema proposals and deterministic
+  `weighted_scorecard` structured aggregates.
+- Public request/response types for authored domain-object creation and updates.
+
+### Changed
+
+- Authored create responses use the shared `DomainObjectMutationResponse` type,
+  and schema identity remains enforced even when the same-name duplicate guard
+  is explicitly bypassed.
+
 ## 0.15.0 (2026-08-17)
 
 This release exposes the dense time-series and governed skill-capture surfaces
