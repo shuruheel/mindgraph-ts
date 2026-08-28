@@ -101,6 +101,32 @@ function seg(value: string | number): string {
   return encodeURIComponent(String(value));
 }
 
+/** Normalize the two serde wire encodings of node and edge enums. The generic
+ * traverse() method intentionally exposes the raw response as unknown; typed
+ * PathStep shortcuts must, however, uphold their declared string contracts. */
+function pathSteps(response: unknown): PathStep[] {
+  const wrapped = response && typeof response === "object" && !Array.isArray(response)
+    ? response as { steps?: unknown }
+    : undefined;
+  const raw = wrapped?.steps ?? response;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    const step = value as Record<string, unknown>;
+    const taggedName = (tagged: unknown): string | null => {
+      if (typeof tagged === "string") return tagged;
+      if (!tagged || typeof tagged !== "object" || Array.isArray(tagged)) return null;
+      const custom = (tagged as Record<string, unknown>).Custom;
+      return typeof custom === "string" ? custom : null;
+    };
+    return [{
+      ...step,
+      node_type: taggedName(step.node_type) ?? "Unknown",
+      edge_type: taggedName(step.edge_type),
+    } as unknown as PathStep];
+  });
+}
+
 export class MindGraphError extends Error {
   constructor(
     message: string,
@@ -968,7 +994,7 @@ export class MindGraph {
       start_uid: uid,
       max_depth: maxDepth,
     });
-    return (r as any)?.steps ?? r;
+    return pathSteps(r);
   }
 
   async neighborhood(uid: string, maxDepth = 1): Promise<PathStep[]> {
@@ -977,7 +1003,7 @@ export class MindGraph {
       start_uid: uid,
       max_depth: maxDepth,
     });
-    return (r as any)?.steps ?? r;
+    return pathSteps(r);
   }
 
   async subgraph(uid: string, opts?: {

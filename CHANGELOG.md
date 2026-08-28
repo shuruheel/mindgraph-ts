@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed
+
+- `reasoningChain()` and `neighborhood()` now normalize the server's
+  serde-tagged custom node/edge forms (`{Custom: "TYPE"}`) to the plain
+  `PathStep.node_type` and `edge_type` strings promised by the SDK type.
+  Generic `traverse()` remains a raw `unknown` response for callers that need
+  wire-level data.
+
 ## 0.15.1 (2026-08-19)
 
 Patch release for the authored ontology-object contract used by the investment

@@ -125,7 +125,10 @@ export interface EnrichedSearchResponse {
 export interface PathStep {
   node_uid: string;
   label: string;
+  /** Plain semantic node type; typed shortcuts unwrap `{Custom: "TYPE"}`. */
   node_type: string;
+  /** Plain semantic relation name. Typed traversal shortcuts normalize the
+   * server's externally tagged `{Custom: "NAME"}` wire form to this string. */
   edge_type: string | null;
   depth: number;
   parent_uid: string | null;

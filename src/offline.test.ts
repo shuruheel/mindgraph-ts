@@ -523,6 +523,36 @@ describe("field-name conventions", () => {
     expect("to_uid" in body).toBe(false);
   });
 
+  test("typed traversal shortcuts normalize serde-tagged custom edge types", async () => {
+    installFetchStub({
+      mode: "neighborhood",
+      start_uid: "decision-1",
+      steps: [
+        {
+          node_uid: "evidence-1",
+          label: "Decision evidence",
+          node_type: { Custom: "DecisionEvidence" },
+          edge_type: { Custom: "SUPPORTED_BY" },
+          depth: 1,
+          parent_uid: "decision-1",
+        },
+      ],
+    });
+    const mg = newClient();
+
+    const steps = await mg.neighborhood("decision-1", 2);
+
+    expect(steps).toHaveLength(1);
+    expect(steps[0].edge_type).toBe("SUPPORTED_BY");
+    expect(steps[0].node_type).toBe("DecisionEvidence");
+    expect(steps[0].node_uid).toBe("evidence-1");
+    expect(captured[0].body).toEqual({
+      action: "neighborhood",
+      start_uid: "decision-1",
+      max_depth: 2,
+    });
+  });
+
   test("argument endpoint is monolithic with an evidence ARRAY", async () => {
     installFetchStub();
     const mg = newClient();
