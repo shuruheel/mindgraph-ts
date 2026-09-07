@@ -1825,7 +1825,11 @@ export interface OntologyProposal {
   approval_uid?: string | null;
   proposed_node_uid?: string | null;
   applied_job_id?: string | null;
+  /** Known result UID, including a partial result that needs reconciliation. */
+  applied_uid?: string | null;
   applied_error?: string | null;
+  /** A terminal execution failure; earlier graph changes may have committed. */
+  applied_error_details?: OntologyApplyErrorDetails | null;
   apply_attempt_count: number;
   edited_by?: string | null;
   edited_at?: string | null;
@@ -1834,6 +1838,13 @@ export interface OntologyProposal {
   created_at: string;
   resolved_at?: string | null;
   resolved_by?: string | null;
+}
+
+export interface OntologyApplyErrorDetails {
+  code: string;
+  message: string;
+  status: number;
+  retriable: false;
 }
 
 export interface OntologyDuplicateAudit {
