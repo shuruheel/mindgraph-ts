@@ -11,7 +11,7 @@
  */
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { MindGraph } from "./client.js";
-import type { OntologyProposal } from "./index.js";
+import type { OntologyProposal, OntologySchemaDetail } from "./index.js";
 import {
   CONTRACT,
   RETRIEVE_ACTIONS,
@@ -209,6 +209,26 @@ describe("ontology review and audit routes", () => {
     expect(result.items[0].applied_uid).toBe(proposal.applied_uid);
     expect(result.items[0].applied_error_details).toEqual(proposal.applied_error_details);
     expect(captured.map(request => request.method)).toEqual(["GET"]);
+  });
+
+  test("reads durable schema proposal failures and tolerates older rows without replay", async () => {
+    const schema: OntologySchemaDetail = {
+      id: "schema/1", org_id: "org-1", name: "partial draft", status: "archived",
+      version: 1, propose_status: "failed", propose_error: "Query admission is busy",
+      propose_error_details: {
+        code: "query_admission_busy", message: "Query admission is busy", status: 503, retriable: false,
+      },
+      created_at: "2026-09-07T00:00:00Z", updated_at: "2026-09-07T00:00:00Z",
+      object_types: [], relation_types: [], series_bindings: [],
+    };
+    installFetchStub(schema);
+    const mg = newClient();
+    expect((await mg.getOntologySchema("schema/1")).propose_error_details).toEqual(schema.propose_error_details);
+    delete schema.propose_error_details;
+    installFetchStub(schema);
+    expect((await mg.getOntologySchema("schema/1")).propose_error_details).toBeUndefined();
+    expect(captured.map(request => request.method)).toEqual(["GET", "GET"]);
+    expect(new URL(captured[0].url).pathname).toBe("/v1/ontology/schemas/schema%2F1");
   });
 
   test("exposes explicit semantic analysis and read-only duplicate audit", async () => {
