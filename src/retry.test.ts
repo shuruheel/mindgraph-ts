@@ -78,6 +78,14 @@ describe("engine failure retry contract", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  test("classifies the serialized action rather than an input object's read label", async () => {
+    const fetcher = transport({ retriable: true });
+    const request = { action: "get_plan" as const, toJSON: () => ({ action: "create_task", label: "task" }) };
+    await expect(client().plan(request)).rejects.toBeInstanceOf(MindGraphError);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body).action).toBe("create_task");
+  });
+
   test.each(["NaN", "Infinity", "-1", "invalid", ""]) ("bounds fallback delay for %s", async (header) => {
     vi.useFakeTimers();
     const fetcher = transport("busy", 503, header);

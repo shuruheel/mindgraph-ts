@@ -177,7 +177,6 @@ export class MindGraph {
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    const retrySafe = canRetryRequest(method, path, body);
     // One id per logical call, retained across 503 retries.
     const requestId = createRequestId();
     const init: RequestInit = {
@@ -193,6 +192,9 @@ export class MindGraph {
     if (body !== undefined) {
       init.body = JSON.stringify(body);
     }
+    // Classify the payload actually sent (including any caller toJSON hook).
+    const retrySafe = canRetryRequest(method, path,
+      typeof init.body === "string" ? JSON.parse(init.body) : undefined);
 
     let lastError: MindGraphError | undefined;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
