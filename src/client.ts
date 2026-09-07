@@ -1,3 +1,4 @@
+import { canRetryRequest, errorFields, permitsRetry, retryDelayMs } from "./retry.js";
 import type {
   MindGraphConfig,
   GraphNode,
@@ -128,6 +129,8 @@ function pathSteps(response: unknown): PathStep[] {
 }
 
 export class MindGraphError extends Error {
+  public readonly code?: string;
+  public readonly retriable?: boolean;
   constructor(
     message: string,
     public status: number,
@@ -135,6 +138,9 @@ export class MindGraphError extends Error {
   ) {
     super(message);
     this.name = "MindGraphError";
+    const fields = errorFields(body);
+    this.code = fields.code;
+    this.retriable = fields.retriable;
   }
 }
 
@@ -159,12 +165,19 @@ export class MindGraph {
     this.telemetrySurface = config.telemetrySurface;
     this.maxRetries = config.maxRetries ?? 3;
     this.retryBackoffMs = config.retryBackoffMs ?? 1000;
+    if (!Number.isSafeInteger(this.maxRetries) || this.maxRetries < 0) {
+      throw new RangeError("maxRetries must be a non-negative safe integer");
+    }
+    if (!Number.isFinite(this.retryBackoffMs) || this.retryBackoffMs < 0) {
+      throw new RangeError("retryBackoffMs must be finite and non-negative");
+    }
   }
 
   // ---- HTTP helpers ----
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.baseUrl}${path}`;
+    const retrySafe = canRetryRequest(method, path, body);
     // One id per logical call, retained across 503 retries.
     const requestId = createRequestId();
     const init: RequestInit = {
@@ -193,19 +206,11 @@ export class MindGraph {
           res.status,
           parsed,
         );
-        // Retry on 503 (server warming up or tenant pool at capacity).
-        // When the server sends Retry-After (delta-seconds), honor it — the
-        // cloud's admission control sizes that hint so the total client wait
-        // stays bounded; blind exponential backoff on top of a server-side
-        // wait once composed into ~47 s worst-case hangs. Capped at 10 s per
-        // attempt so a malformed or hostile header cannot park the client.
-        if (res.status === 503 && attempt < this.maxRetries) {
+        // A server hint never grants idempotency to an unsafe write. Older
+        // servers retain retries only for reviewed operations.
+        if (res.status === 503 && retrySafe && permitsRetry(err) && attempt < this.maxRetries) {
           lastError = err;
-          const retryAfterSecs = Number(res.headers.get("retry-after"));
-          const delay =
-            Number.isFinite(retryAfterSecs) && retryAfterSecs > 0
-              ? Math.min(retryAfterSecs * 1000, 10_000)
-              : this.retryBackoffMs * 2 ** attempt;
+          const delay = retryDelayMs(res.headers.get("retry-after"), this.retryBackoffMs, attempt);
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }

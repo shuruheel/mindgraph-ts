@@ -1326,9 +1326,9 @@ export interface MindGraphConfig {
    * uses this value for authorization or result membership.
    */
   telemetrySurface?: "dashboard" | "mcp";
-  /** Max retries for 503 (server warming up) responses. Default: 3. Set to 0 to disable. */
+  /** Max 503 retries for reviewed reads or keyed work operations. retriable:false stops retries. Default: 3. Set to 0 to disable. */
   maxRetries?: number;
-  /** Initial backoff in ms before first retry. Doubles each attempt. Default: 1000. */
+  /** Initial backoff in ms before first retry. Doubles each attempt, capped at 10 seconds. Default: 1000. */
   retryBackoffMs?: number;
 }
 
