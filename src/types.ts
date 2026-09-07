@@ -1669,6 +1669,8 @@ export interface OntologySchema {
   propose_status?: "pending" | "running" | "ready" | "failed" | null;
   propose_job_id?: string | null;
   propose_error?: string | null;
+  /** Durable terminal reason; absent on older servers. Review partial drafts before retry. */
+  propose_error_details?: OntologyProposeErrorDetails | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at: string;
@@ -1839,6 +1841,9 @@ export interface OntologyProposal {
   resolved_at?: string | null;
   resolved_by?: string | null;
 }
+
+/** Proposal and apply failures share the safe terminal execution metadata. */
+export type OntologyProposeErrorDetails = OntologyApplyErrorDetails;
 
 export interface OntologyApplyErrorDetails {
   code: string;
