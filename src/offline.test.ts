@@ -11,7 +11,7 @@
  */
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { MindGraph } from "./client.js";
-import type { OntologyProposal, OntologySchemaDetail } from "./index.js";
+import type { Job, OntologyProposal, OntologySchemaDetail } from "./index.js";
 import {
   CONTRACT,
   RETRIEVE_ACTIONS,
@@ -69,6 +69,24 @@ function newClient(): MindGraph {
 
 beforeEach(() => {
   captured = [];
+});
+
+test("job status preserves terminal metadata, partial results and legacy responses without replay", async () => {
+  const job: Job = {
+    id: "job-1", title: "test run", status: "failed", created_at: 1,
+    progress: { total_chunks: 3, processed_chunks: 1, nodes_created: 0, edges_created: 0 },
+    result: null, error: "Query exceeded its memory budget",
+    error_details: { code: "query_memory_budget_exceeded", message: "Query exceeded its memory budget", status: 422, retriable: false },
+  };
+  installFetchStub(job);
+  const client = newClient();
+  expect(await client.getJob(job.id)).toEqual(job);
+  delete job.error_details;
+  job.status = "completed_with_errors";
+  job.result = { errors: ["legacy warning"] };
+  installFetchStub(job);
+  expect(await client.getJob(job.id)).toEqual(job);
+  expect(captured.map(request => request.method)).toEqual(["GET", "GET"]);
 });
 
 describe("corpus project wire contract", () => {

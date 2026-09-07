@@ -1228,10 +1228,18 @@ export interface RetrieveContextResponse {
   };
 }
 
+/** Safe terminal reason. This does not authorize replaying a whole job. */
+export interface JobErrorDetails {
+  code: string;
+  message: string;
+  status: number;
+  retriable: boolean;
+}
+
 export interface Job {
   id: string;
   title: string;
-  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+  status: "pending" | "processing" | "completed" | "completed_with_errors" | "failed" | "cancelled";
   progress: {
     total_chunks: number;
     processed_chunks: number;
@@ -1240,6 +1248,8 @@ export interface Job {
   };
   result: Record<string, unknown> | null;
   error: string | null;
+  /** Absent for older servers or ordinary failures. */
+  error_details?: JobErrorDetails | null;
   created_at: number;
   queue_position?: number;
 }
