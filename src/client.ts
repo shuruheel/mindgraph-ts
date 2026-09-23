@@ -31,6 +31,11 @@ import type {
   SessionRequest,
   DistillRequest,
   MemoryConfigRequest,
+  RememberOptions,
+  RememberResponse,
+  ForgetTarget,
+  ForgetOptions,
+  ForgetResponse,
   MemorySyncRequest,
   PlanRequest,
   GovernanceRequest,
@@ -149,6 +154,7 @@ export class MindGraph {
   private headers: Record<string, string>;
   private maxRetries: number;
   private retryBackoffMs: number;
+  private timeoutMs?: number;
   private telemetrySurface?: "dashboard" | "mcp";
 
   constructor(config: MindGraphConfig) {
@@ -170,6 +176,12 @@ export class MindGraph {
     }
     if (!Number.isFinite(this.retryBackoffMs) || this.retryBackoffMs < 0) {
       throw new RangeError("retryBackoffMs must be finite and non-negative");
+    }
+    if (config.timeoutMs !== undefined) {
+      if (!Number.isFinite(config.timeoutMs) || config.timeoutMs <= 0) {
+        throw new RangeError("timeoutMs must be a positive finite number of milliseconds");
+      }
+      this.timeoutMs = config.timeoutMs;
     }
   }
 
@@ -198,7 +210,7 @@ export class MindGraph {
 
     let lastError: MindGraphError | undefined;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-      const res = await fetch(url, init);
+      const res = await this.fetchWithDeadline(url, init, method, path);
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         let parsed: unknown;
@@ -223,6 +235,39 @@ export class MindGraph {
       return JSON.parse(text) as T;
     }
     throw lastError!;
+  }
+
+  /**
+   * One HTTP attempt. With `timeoutMs` set, the attempt is aborted at the
+   * deadline and surfaces as a non-retriable `MindGraphError` (`code:
+   * "timeout"`, `status: 0`). Without it the request is sent unchanged — no
+   * AbortSignal is attached, preserving the pre-0.16 behaviour.
+   */
+  private async fetchWithDeadline(
+    url: string,
+    init: RequestInit,
+    method: string,
+    path: string,
+  ): Promise<Response> {
+    if (this.timeoutMs === undefined) {
+      return fetch(url, init);
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new MindGraphError(
+          `${method} ${path} timed out after ${this.timeoutMs}ms`,
+          0,
+          { error: "timeout", code: "timeout", retriable: false },
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private get<T>(path: string): Promise<T> {
@@ -627,6 +672,50 @@ export class MindGraph {
 
   async memorySync(req: MemorySyncRequest): Promise<unknown> {
     return this.post("/memory/sync", req);
+  }
+
+  // ---- Memory (fast path) ----
+
+  /**
+   * Store a small piece of text as a memory, synchronously. The node is
+   * BM25- and vector-searchable when this resolves (`searchable` says which).
+   * Pass `custom_id` to make re-sends an upsert of the same node.
+   */
+  async remember(text: string, options: RememberOptions = {}): Promise<RememberResponse> {
+    return this.post("/memory/remember", { text, ...options });
+  }
+
+  /**
+   * Reversibly remove a memory by `uid` or `custom_id` (tombstone plus its
+   * connected edges). `dry_run: true` previews the affected edge uids first.
+   * Undo with `restore(uid)` and `evolve({ action: "restore_edge", uid })`.
+   */
+  async forget(target: ForgetTarget, options: ForgetOptions = {}): Promise<ForgetResponse> {
+    return this.post("/memory/forget", { ...target, ...options });
+  }
+
+  /**
+   * Operator guidance for what agents should remember into a Space; surfaced
+   * on every `remember()` response and on `retrieveContext()`. Empty clears it.
+   */
+  async setRememberInstructions(
+    text: string,
+    options: { space_uid?: string; agent_id?: string } = {},
+  ): Promise<{ space_uid: string; remember_instructions: string | null }> {
+    return this.post("/memory/config", {
+      action: "set_remember_instructions" as const,
+      text,
+      ...options,
+    });
+  }
+
+  async getRememberInstructions(
+    options: { space_uid?: string } = {},
+  ): Promise<{ space_uid: string; remember_instructions: string | null }> {
+    return this.post("/memory/config", {
+      action: "get_remember_instructions" as const,
+      ...options,
+    });
   }
 
   // ---- Agent Layer ----

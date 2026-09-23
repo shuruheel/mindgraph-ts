@@ -21,16 +21,23 @@ const graph = new MindGraph({
   apiKey: "mg_...",
 });
 
-// Add a node
+// Remember something — searchable the moment this resolves
+const memory = await graph.remember("User prefers dark mode in every editor", {
+  custom_id: "pref:theme", // re-sending this key updates the same memory
+});
+
+// Search (BM25 + vector)
+const results = await graph.search("what does the user prefer?");
+
+// Forget it later — preview first, then tombstone (reversible)
+await graph.forget({ custom_id: "pref:theme" }, { dry_run: true });
+await graph.forget({ custom_id: "pref:theme" });
+
+// Or build structure explicitly
 const node = await graph.addNode({
   label: "User prefers dark mode",
   node_type: "Preference",
 });
-
-// Search
-const results = await graph.search("what does the user prefer?");
-
-// Connect knowledge
 await graph.addLink({
   from_uid: node.uid,
   to_uid: "user_abc",
@@ -43,7 +50,7 @@ await graph.addLink({
 ### Constructor
 
 ```typescript
-new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
+new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string, timeoutMs?: number })
 ```
 
 ### Reality Layer
@@ -107,6 +114,9 @@ const entity = await graph.findOrCreateEntity("Some Entity");
 |--------|-------------|
 | `session(req)` | Open a session, record traces, or close a session |
 | `journal(label, props, options?)` | Record a journal entry linked to an optional session |
+| `remember(text, options?)` | Small-text fast path: synchronous write, BM25- and vector-searchable on return; `custom_id` makes re-sends an upsert |
+| `forget(target, options?)` | Reversible removal by `{ uid }` or `{ custom_id }`; `dry_run` previews the affected edge uids |
+| `setRememberInstructions(text, options?)` / `getRememberInstructions()` | Per-Space guidance for what agents should remember; surfaced on `remember()` and `retrieveContext()` |
 | `distill(req)` | Create a Summary, Lesson, or governed Skill candidate with source provenance |
 | `memoryConfig(req)` | Set/get preferences and memory policies |
 
