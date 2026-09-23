@@ -372,6 +372,50 @@ describe("graph-aware ontology retrieval wire contract", () => {
 // ---------------------------------------------------------------------------
 // Sanity: the stub really intercepts and no real network is hit.
 // ---------------------------------------------------------------------------
+describe("timeoutMs deadline", () => {
+  test("aborts a hung request and rejects with a non-retriable timeout error", async () => {
+    vi.useFakeTimers();
+    try {
+      const stub = vi.fn((_input: unknown, init?: RequestInit) => {
+        // Never resolves on its own; only the abort signal ends it.
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          });
+        });
+      });
+      vi.stubGlobal("fetch", stub);
+      const mg = new MindGraph({ baseUrl: BASE, apiKey: "mg_test_offline", timeoutMs: 50 });
+      const pending = mg.remember("slow");
+      const settled = pending.catch((error: unknown) => error);
+      await vi.advanceTimersByTimeAsync(60);
+      const error = (await settled) as { code?: string; status?: number; retriable?: boolean };
+      expect(error).toBeInstanceOf(Error);
+      expect(error.code).toBe("timeout");
+      expect(error.status).toBe(0);
+      expect(error.retriable).toBe(false);
+      expect(stub).toHaveBeenCalledTimes(1);
+      const init = stub.mock.calls[0][1] as RequestInit;
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("without timeoutMs no signal is attached (pre-0.16 behaviour preserved)", async () => {
+    installFetchStub({ uid: "n1" });
+    const mg = newClient();
+    await mg.remember("fast");
+    expect(captured).toHaveLength(1);
+    const call = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+    expect((call[1] as RequestInit).signal).toBeUndefined();
+  });
+
+  test("rejects a non-positive timeoutMs at construction", () => {
+    expect(() => new MindGraph({ baseUrl: BASE, timeoutMs: 0 })).toThrow(RangeError);
+  });
+});
+
 describe("offline transport stub", () => {
   test("captures requests instead of hitting the network", async () => {
     installFetchStub({ status: "ok" });

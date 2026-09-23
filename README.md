@@ -50,7 +50,7 @@ await graph.addLink({
 ### Constructor
 
 ```typescript
-new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string })
+new MindGraph({ baseUrl: string, apiKey?: string, jwt?: string, timeoutMs?: number })
 ```
 
 ### Reality Layer

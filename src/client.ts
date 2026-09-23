@@ -154,6 +154,7 @@ export class MindGraph {
   private headers: Record<string, string>;
   private maxRetries: number;
   private retryBackoffMs: number;
+  private timeoutMs?: number;
   private telemetrySurface?: "dashboard" | "mcp";
 
   constructor(config: MindGraphConfig) {
@@ -175,6 +176,12 @@ export class MindGraph {
     }
     if (!Number.isFinite(this.retryBackoffMs) || this.retryBackoffMs < 0) {
       throw new RangeError("retryBackoffMs must be finite and non-negative");
+    }
+    if (config.timeoutMs !== undefined) {
+      if (!Number.isFinite(config.timeoutMs) || config.timeoutMs <= 0) {
+        throw new RangeError("timeoutMs must be a positive finite number of milliseconds");
+      }
+      this.timeoutMs = config.timeoutMs;
     }
   }
 
@@ -203,7 +210,7 @@ export class MindGraph {
 
     let lastError: MindGraphError | undefined;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-      const res = await fetch(url, init);
+      const res = await this.fetchWithDeadline(url, init, method, path);
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         let parsed: unknown;
@@ -228,6 +235,39 @@ export class MindGraph {
       return JSON.parse(text) as T;
     }
     throw lastError!;
+  }
+
+  /**
+   * One HTTP attempt. With `timeoutMs` set, the attempt is aborted at the
+   * deadline and surfaces as a non-retriable `MindGraphError` (`code:
+   * "timeout"`, `status: 0`). Without it the request is sent unchanged — no
+   * AbortSignal is attached, preserving the pre-0.16 behaviour.
+   */
+  private async fetchWithDeadline(
+    url: string,
+    init: RequestInit,
+    method: string,
+    path: string,
+  ): Promise<Response> {
+    if (this.timeoutMs === undefined) {
+      return fetch(url, init);
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new MindGraphError(
+          `${method} ${path} timed out after ${this.timeoutMs}ms`,
+          0,
+          { error: "timeout", code: "timeout", retriable: false },
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private get<T>(path: string): Promise<T> {

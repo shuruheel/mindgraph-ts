@@ -571,6 +571,13 @@ export interface SessionRequest {
   model?: string;
   props?: Record<string, unknown>;
   agent_id?: string;
+  /**
+   * Server-side replay key (`/memory/session` supports it on every action):
+   * the same key with the same payload returns the stored receipt; the same
+   * key with a different payload is a 409. Use a host's operation id so a
+   * re-run compaction capture or trace is byte-identical.
+   */
+  idempotency_key?: string;
 }
 
 /** Caller-authored content for a governed skill candidate. */
@@ -1412,6 +1419,14 @@ export interface MindGraphConfig {
   maxRetries?: number;
   /** Initial backoff in ms before first retry. Doubles each attempt, capped at 10 seconds. Default: 1000. */
   retryBackoffMs?: number;
+  /**
+   * Per-request deadline in ms. When set, each HTTP attempt is aborted after
+   * this long and the call rejects with a `MindGraphError` whose `code` is
+   * `"timeout"` (`status` 0, `retriable: false`). Unset (default) keeps the
+   * historical behaviour: no deadline and no AbortSignal on the request.
+   * Fail-open wrappers (agent memory providers) set this to a few seconds.
+   */
+  timeoutMs?: number;
 }
 
 // ============================================================================
