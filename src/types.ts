@@ -614,13 +614,95 @@ export type DistillRequest =
   | SkillDistillRequest;
 
 export interface MemoryConfigRequest {
-  action: "set_preference" | "get_preferences" | "set_policy" | "get_policies";
+  action:
+    | "set_preference"
+    | "get_preferences"
+    | "set_policy"
+    | "get_policies"
+    | "set_remember_instructions"
+    | "get_remember_instructions";
   label?: string;
   summary?: string;
   confidence?: number;
   salience?: number;
   props?: Record<string, unknown>;
   agent_id?: string;
+  /** Target Space for the `remember_instructions` actions (default: org space). */
+  space_uid?: string;
+  /** Instruction text for `set_remember_instructions`; empty clears it. */
+  text?: string;
+}
+
+// ---- Memory fast path (POST /memory/remember, POST /memory/forget) ----
+
+export interface RememberOptions {
+  /**
+   * Caller-owned idempotency and upsert key. Re-sending the same `custom_id`
+   * with new text edits the same node (version bump, history kept); with the
+   * same text it is a no-op.
+   */
+  custom_id?: string;
+  /** Node label; defaults to the first line of `text` (80 chars). */
+  label?: string;
+  props?: Record<string, unknown>;
+  confidence?: number;
+  salience?: number;
+  agent_id?: string;
+  /** Explicit target Space; default is the org space. */
+  space_uid?: string;
+  /**
+   * Without a `custom_id`, what to do on an exact write-time-resolution hit:
+   * `reuse` (default) returns the existing node, `create` inserts anyway.
+   */
+  on_near_duplicate?: "reuse" | "create";
+}
+
+export interface RememberRequest extends RememberOptions {
+  text: string;
+}
+
+export interface RememberResponse {
+  uid: string;
+  custom_id: string | null;
+  /** `inserted` (201) | `updated` | `unchanged` | `reused` (200). */
+  action: "inserted" | "updated" | "unchanged" | "reused";
+  label: string;
+  version: number;
+  space_uid: string;
+  /** True when the vector was stored before this response. */
+  embedded: boolean;
+  searchable: { bm25: boolean; vector: boolean };
+  near_duplicates: unknown[];
+  /** The Space's `remember_instructions`, if set. */
+  remember_instructions: string | null;
+}
+
+export type ForgetTarget = { uid: string; custom_id?: never } | { custom_id: string; uid?: never };
+
+export interface ForgetOptions {
+  /** Preview the affected edges without changing anything. */
+  dry_run?: boolean;
+  /** Also tombstone connected edges (default true). */
+  cascade?: boolean;
+  reason?: string;
+  agent_id?: string;
+}
+
+export type ForgetRequest = ForgetTarget & ForgetOptions;
+
+export interface ForgetResponse {
+  uid: string;
+  label: string;
+  dry_run: boolean;
+  cascade: boolean;
+  /** Present on a dry run. */
+  would_tombstone_edges?: number;
+  /** Present after execution. */
+  action?: "forgotten";
+  edges_tombstoned?: number;
+  /** Edge uids removed (or that would be); undo each with `/evolve restore_edge`. */
+  edge_uids: string[];
+  undo: { node: string; edges: string };
 }
 
 export interface MemorySyncRequest {

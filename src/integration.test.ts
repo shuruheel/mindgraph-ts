@@ -437,6 +437,39 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     });
   });
 
+  describe("Memory: Remember", () => {
+    test("remember is searchable on return", async () => {
+      const r = await mg.remember(
+        "TS SDK remembers: the deploy target is fly app mg-prod-sdk-test",
+        { custom_id: "ts-sdk-test:deploy-target" },
+      );
+      expect(["inserted", "updated", "unchanged"]).toContain(r.action);
+      expect(r.searchable.bm25).toBe(true);
+      uids.memory = r.uid;
+      const hits = (await mg.search("mg-prod-sdk-test deploy target", { limit: 10 })) as any;
+      const rows = Array.isArray(hits) ? hits : hits.results ?? [];
+      expect(rows.some((h: any) => h?.node?.uid === r.uid)).toBe(true);
+    });
+
+    test("custom_id upserts the same node", async () => {
+      const r = await mg.remember(
+        "TS SDK remembers: the deploy target is fly app mg-prod-sdk-test-2",
+        { custom_id: "ts-sdk-test:deploy-target" },
+      );
+      expect(r.uid).toBe(uids.memory);
+      expect(r.action).toBe("updated");
+    });
+
+    test("forget dry-run then forget", async () => {
+      const preview = await mg.forget({ custom_id: "ts-sdk-test:deploy-target" }, { dry_run: true });
+      expect(preview.dry_run).toBe(true);
+      expect(preview.uid).toBe(uids.memory);
+      const done = await mg.forget({ custom_id: "ts-sdk-test:deploy-target" });
+      expect(done.action).toBe("forgotten");
+      expect(done.uid).toBe(uids.memory);
+    });
+  });
+
   describe("Memory: Distill", () => {
     test("distill", async () => {
       const r = await mg.distill({

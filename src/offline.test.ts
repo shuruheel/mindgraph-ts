@@ -598,8 +598,13 @@ describe("/retrieve action set", () => {
 // Monolithic endpoints registry sanity.
 // ---------------------------------------------------------------------------
 describe("monolithic endpoints", () => {
-  test("argument + distill are registered as action-less", () => {
-    expect([...ACTIONLESS_ENDPOINTS].sort()).toEqual(["/epistemic/argument", "/memory/distill"]);
+  test("argument, distill, remember and forget are registered as action-less", () => {
+    expect([...ACTIONLESS_ENDPOINTS].sort()).toEqual([
+      "/epistemic/argument",
+      "/memory/distill",
+      "/memory/forget",
+      "/memory/remember",
+    ]);
   });
 });
 

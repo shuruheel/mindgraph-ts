@@ -31,6 +31,11 @@ import type {
   SessionRequest,
   DistillRequest,
   MemoryConfigRequest,
+  RememberOptions,
+  RememberResponse,
+  ForgetTarget,
+  ForgetOptions,
+  ForgetResponse,
   MemorySyncRequest,
   PlanRequest,
   GovernanceRequest,
@@ -627,6 +632,50 @@ export class MindGraph {
 
   async memorySync(req: MemorySyncRequest): Promise<unknown> {
     return this.post("/memory/sync", req);
+  }
+
+  // ---- Memory (fast path) ----
+
+  /**
+   * Store a small piece of text as a memory, synchronously. The node is
+   * BM25- and vector-searchable when this resolves (`searchable` says which).
+   * Pass `custom_id` to make re-sends an upsert of the same node.
+   */
+  async remember(text: string, options: RememberOptions = {}): Promise<RememberResponse> {
+    return this.post("/memory/remember", { text, ...options });
+  }
+
+  /**
+   * Reversibly remove a memory by `uid` or `custom_id` (tombstone plus its
+   * connected edges). `dry_run: true` previews the affected edge uids first.
+   * Undo with `restore(uid)` and `evolve({ action: "restore_edge", uid })`.
+   */
+  async forget(target: ForgetTarget, options: ForgetOptions = {}): Promise<ForgetResponse> {
+    return this.post("/memory/forget", { ...target, ...options });
+  }
+
+  /**
+   * Operator guidance for what agents should remember into a Space; surfaced
+   * on every `remember()` response and on `retrieveContext()`. Empty clears it.
+   */
+  async setRememberInstructions(
+    text: string,
+    options: { space_uid?: string; agent_id?: string } = {},
+  ): Promise<{ space_uid: string; remember_instructions: string | null }> {
+    return this.post("/memory/config", {
+      action: "set_remember_instructions" as const,
+      text,
+      ...options,
+    });
+  }
+
+  async getRememberInstructions(
+    options: { space_uid?: string } = {},
+  ): Promise<{ space_uid: string; remember_instructions: string | null }> {
+    return this.post("/memory/config", {
+      action: "get_remember_instructions" as const,
+      ...options,
+    });
   }
 
   // ---- Agent Layer ----
