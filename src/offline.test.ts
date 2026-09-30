@@ -11,6 +11,7 @@
  */
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { MindGraph } from "./client.js";
+import type { Job, OntologyProposal, OntologySchemaDetail } from "./index.js";
 import {
   CONTRACT,
   RETRIEVE_ACTIONS,
@@ -68,6 +69,24 @@ function newClient(): MindGraph {
 
 beforeEach(() => {
   captured = [];
+});
+
+test("job status preserves terminal metadata, partial results and legacy responses without replay", async () => {
+  const job: Job = {
+    id: "job-1", title: "test run", status: "failed", created_at: 1,
+    progress: { total_chunks: 3, processed_chunks: 1, nodes_created: 0, edges_created: 0 },
+    result: null, error: "Query exceeded its memory budget",
+    error_details: { code: "query_memory_budget_exceeded", message: "Query exceeded its memory budget", status: 422, retriable: false },
+  };
+  installFetchStub(job);
+  const client = newClient();
+  expect(await client.getJob(job.id)).toEqual(job);
+  delete job.error_details;
+  job.status = "completed_with_errors";
+  job.result = { errors: ["legacy warning"] };
+  installFetchStub(job);
+  expect(await client.getJob(job.id)).toEqual(job);
+  expect(captured.map(request => request.method)).toEqual(["GET", "GET"]);
 });
 
 describe("corpus project wire contract", () => {
@@ -187,6 +206,47 @@ describe("ontology review and audit routes", () => {
     expect(url.searchParams.get("schema_id")).toBe("schema-1");
     expect(url.searchParams.get("proposal_type")).toBe("semantic_match_candidate");
     expect(url.searchParams.get("extract_job_id")).toBe("job-1");
+  });
+
+  test("retains proposal recovery details and partial UIDs without replaying writes", async () => {
+    const proposal: OntologyProposal = {
+      id: "proposal-1", org_id: "org-1", schema_id: "schema-1",
+      proposal_type: "object_create", source_uids: [], source_scope_ids: [],
+      changes_json: { adds: [], updates: [], removes: [] },
+      review_status: "apply_failed", apply_attempt_count: 1,
+      requires_manual_resolution: false, created_at: "2026-09-07T00:00:00Z",
+      applied_job_id: "run-failed", applied_uid: "obj:partial-customer",
+      applied_error: "Query exceeded its memory budget",
+      applied_error_details: {
+        code: "query_memory_budget_exceeded", message: "Query exceeded its memory budget",
+        status: 422, retriable: false,
+      },
+    };
+    installFetchStub({ items: [proposal], limit: 50, offset: 0 });
+    const result = await newClient().listOntologyProposals({ schema_id: "schema-1" });
+    expect(result.items[0].applied_uid).toBe(proposal.applied_uid);
+    expect(result.items[0].applied_error_details).toEqual(proposal.applied_error_details);
+    expect(captured.map(request => request.method)).toEqual(["GET"]);
+  });
+
+  test("reads durable schema proposal failures and tolerates older rows without replay", async () => {
+    const schema: OntologySchemaDetail = {
+      id: "schema/1", org_id: "org-1", name: "partial draft", status: "archived",
+      version: 1, propose_status: "failed", propose_error: "Query admission is busy",
+      propose_error_details: {
+        code: "query_admission_busy", message: "Query admission is busy", status: 503, retriable: false,
+      },
+      created_at: "2026-09-07T00:00:00Z", updated_at: "2026-09-07T00:00:00Z",
+      object_types: [], relation_types: [], series_bindings: [],
+    };
+    installFetchStub(schema);
+    const mg = newClient();
+    expect((await mg.getOntologySchema("schema/1")).propose_error_details).toEqual(schema.propose_error_details);
+    delete schema.propose_error_details;
+    installFetchStub(schema);
+    expect((await mg.getOntologySchema("schema/1")).propose_error_details).toBeUndefined();
+    expect(captured.map(request => request.method)).toEqual(["GET", "GET"]);
+    expect(new URL(captured[0].url).pathname).toBe("/v1/ontology/schemas/schema%2F1");
   });
 
   test("exposes explicit semantic analysis and read-only duplicate audit", async () => {

@@ -134,6 +134,8 @@ export type {
   OntologyObjectTypeInput,
   OntologyRelationTypeInput,
   OntologyProposal,
+  OntologyApplyErrorDetails,
+  OntologyProposeErrorDetails,
   ProposalEdits,
   OntologyDuplicateAudit,
   OntologyQueryPredicate,
