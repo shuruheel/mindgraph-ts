@@ -82,7 +82,14 @@ export const ENDPOINT_ACTIONS: Record<string, readonly string[]> = {
   "/action/procedure": ["create_flow", "add_step", "add_affordance", "add_control"],
   "/action/risk": ["assess", "get_assessments"],
   "/memory/session": ["open", "trace", "close", "journal"],
-  "/memory/config": ["set_preference", "get_preferences", "set_policy", "get_policies"],
+  "/memory/config": [
+    "set_preference",
+    "get_preferences",
+    "set_policy",
+    "get_policies",
+    "set_remember_instructions",
+    "get_remember_instructions",
+  ],
   "/memory/sync": ["scan", "begin", "record", "finalize", "status", "abandon"],
   "/agent/plan": [
     "create_task", "create_plan", "add_step", "update_status", "get_plan",
@@ -114,7 +121,12 @@ export const ENDPOINT_ACTIONS: Record<string, readonly string[]> = {
 };
 
 /** Endpoints that are MONOLITHIC — they take NO `action` field. */
-export const ACTIONLESS_ENDPOINTS = ["/epistemic/argument", "/memory/distill"] as const;
+export const ACTIONLESS_ENDPOINTS = [
+  "/epistemic/argument",
+  "/memory/distill",
+  "/memory/remember",
+  "/memory/forget",
+] as const;
 
 /**
  * Per-method expected wire contract. Each entry says: when you call this SDK
@@ -382,6 +394,42 @@ export const CONTRACT: ContractEntry[] = [
     action: "set_preference",
     requiredFields: ["action"],
     args: [{ action: "set_preference", label: "P", summary: "S" }],
+  },
+  {
+    // MONOLITHIC fast path: `text` plus options; custom_id is the upsert key.
+    method: "remember",
+    endpoint: "/memory/remember",
+    httpMethod: "POST",
+    action: null,
+    requiredFields: ["text", "custom_id"],
+    forbiddenFields: ["action"],
+    args: ["User prefers dark mode", { custom_id: "pref:theme" }],
+  },
+  {
+    // MONOLITHIC: target by custom_id (or uid); dry_run previews.
+    method: "forget",
+    endpoint: "/memory/forget",
+    httpMethod: "POST",
+    action: null,
+    requiredFields: ["custom_id", "dry_run"],
+    forbiddenFields: ["action", "uid"],
+    args: [{ custom_id: "pref:theme" }, { dry_run: true }],
+  },
+  {
+    method: "setRememberInstructions",
+    endpoint: "/memory/config",
+    httpMethod: "POST",
+    action: "set_remember_instructions",
+    requiredFields: ["action", "text"],
+    args: ["Remember decisions and deploy targets."],
+  },
+  {
+    method: "getRememberInstructions",
+    endpoint: "/memory/config",
+    httpMethod: "POST",
+    action: "get_remember_instructions",
+    requiredFields: ["action"],
+    args: [],
   },
   ...[
     {
