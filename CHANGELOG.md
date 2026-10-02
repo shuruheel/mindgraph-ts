@@ -2,6 +2,46 @@
 
 ## Unreleased
 
+## 0.16.0 (2026-10-02)
+
+The small-text memory fast path, a per-request deadline, and a reviewed retry
+policy. Requires MindGraph Cloud or `mindgraph-server` 1.14.0 for the new
+`/memory/remember` and `/memory/forget` routes; every other method is unchanged.
+
+### Added
+
+- `remember(text, options)` → `POST /memory/remember`: a synchronous write that is
+  BM25- and vector-searchable when the promise resolves (`searchable.bm25` /
+  `searchable.vector` report readiness honestly). A stable `custom_id` makes
+  re-sends an upsert of the same node (`action: "updated" | "unchanged"`) instead
+  of a duplicate; without one, an exact duplicate is reused unless
+  `on_near_duplicate: "create"`. New types `RememberOptions`, `RememberRequest`,
+  `RememberResponse`.
+- `forget({ uid } | { custom_id }, options)` → `POST /memory/forget`: reversible
+  removal (tombstone plus connected edges); `dry_run: true` previews the affected
+  `edge_uids`, and the response names the undo path (`restore` + `restore_edge`).
+  New types `ForgetTarget`, `ForgetOptions`, `ForgetRequest`, `ForgetResponse`.
+- `setRememberInstructions(text, options)` / `getRememberInstructions()` on
+  `/memory/config`: per-Space operator guidance that is returned on every
+  `remember()` response and at the top level of `retrieveContext()`.
+  `MemoryConfigRequest` gains the two actions plus `space_uid` and `text`.
+- `MindGraphConfig.timeoutMs`: an optional per-attempt deadline. When set, a hung
+  request rejects with `MindGraphError { code: "timeout", status: 0,
+  retriable: false }`. Unset keeps the previous behaviour (no `AbortSignal`).
+- `SessionRequest.idempotency_key`: the server-side replay key `/memory/session`
+  already honours, so a host's operation id makes a replayed trace byte-identical.
+
+### Changed
+
+- Retries follow the server's guidance. A 503 is retried only for reviewed
+  read requests and the keyed work operations (`claim_task`, `heartbeat`,
+  `start_iteration`, `checkpoint_iteration`, `block_task`, `complete_task`,
+  `abandon_iteration`), never for other writes; an explicit `retriable: false`
+  in the error body always stops retries. Eligibility is decided on the
+  serialized request body, so a caller `toJSON` hook cannot widen it.
+  `MindGraphError` exposes the server's `code` and `retriable` fields. The policy
+  is kept in step with the Python SDK.
+
 ### Fixed
 
 - `reasoningChain()` and `neighborhood()` now normalize the server's
