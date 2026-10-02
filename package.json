@@ -5,7 +5,9 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "prepare": "npm run build",
     "build": "tsup src/index.ts --format cjs,esm --dts",
@@ -14,8 +16,18 @@
     "test:offline": "vitest run src/offline.test.ts",
     "test:e2e": "vitest run src/integration.test.ts"
   },
-  "keywords": ["mindgraph", "knowledge-graph", "cognitive", "ai", "agent"],
+  "keywords": [
+    "mindgraph",
+    "knowledge-graph",
+    "cognitive",
+    "ai",
+    "agent"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shuruheel/mindgraph-ts.git"
+  },
   "devDependencies": {
     "@types/node": "^25.4.0",
     "tsup": "^8.0.0",
