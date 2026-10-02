@@ -248,7 +248,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
       test(action, async () => {
         const r = await mg.structure({
           action,
-          label: `TS ${action}`,
+          label: `TS ${action} ${RUN}`,
           summary: `Test ${action} node`,
         });
         expect(r).toHaveProperty("uid");
