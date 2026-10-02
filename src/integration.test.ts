@@ -826,7 +826,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
         },
       });
       expect(node).toHaveProperty("uid");
-      expect(node.label).toBe("TS CRUD Node");
+      expect(node.label).toBe(`TS CRUD Node ${RUN}`);
 
       // Read
       const fetched = await mg.getNode(node.uid);
