@@ -1,5 +1,11 @@
 name: Publish to npm
 
+# Publishes `mindgraph` on a `v*` tag (or a manual dispatch from main) through
+# npm trusted publishing: the job authenticates with the GitHub OIDC token, so
+# there is no NODE_AUTH_TOKEN to expire. The trusted publisher for this
+# repo + workflow must be configured on npmjs.com (package settings).
+# Provenance is enabled automatically and requires `repository` in package.json.
+
 on:
   push:
     tags:
@@ -11,20 +17,23 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
+      # Trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
       - run: npm install
 
       - name: Verify tag matches package.json version
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.ref_type == 'tag'
         run: |
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
           PKG_VERSION="$(node -p "require('./package.json').version")"
           echo "Tag version: $TAG_VERSION"
           echo "package.json version: $PKG_VERSION"
@@ -36,6 +45,7 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm run test
+
+      # No NODE_AUTH_TOKEN: npm authenticates via the OIDC id-token against the
+      # trusted publisher configured on npmjs.com.
       - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
