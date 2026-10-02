@@ -14,10 +14,14 @@
  * only) wires a test-org key from a secret.
  */
 import { describe, test, expect, beforeAll } from "vitest";
-import { MindGraph } from "./client.js";
+import { MindGraph, MindGraphError } from "./client.js";
 
 const API_KEY = process.env.API_KEY ?? process.env.MINDGRAPH_API_KEY ?? "";
-const BASE_URL = process.env.BASE_URL ?? "https://api.mindgraph.cloud";
+// vitest mirrors Vite's own `import.meta.env.BASE_URL` ("/") onto process.env,
+// clobbering a caller-provided BASE_URL; prefer MINDGRAPH_BASE_URL and accept
+// BASE_URL only when it is an absolute http(s) URL.
+const rawBase = process.env.MINDGRAPH_BASE_URL ?? process.env.BASE_URL ?? "";
+const BASE_URL = /^https?:\/\//.test(rawBase) ? rawBase : "https://api.mindgraph.cloud";
 /** Live E2E is opt-in only: requires the explicit gate AND an API key. */
 const E2E_ENABLED = process.env.MINDGRAPH_E2E === "1" && !!API_KEY;
 
@@ -41,8 +45,15 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     });
 
     test("stats", async () => {
-      const r = await mg.stats();
-      expect(r).toHaveProperty("live_nodes");
+      // /stats is graph-wide and is refused (403) for a Space- or Project-scoped
+      // principal; a test-org key is usually scoped.
+      try {
+        const r = await mg.stats();
+        expect(r).toHaveProperty("live_nodes");
+      } catch (err) {
+        expect(err).toBeInstanceOf(MindGraphError);
+        expect((err as MindGraphError).status).toBe(403);
+      }
     });
   });
 
@@ -402,10 +413,13 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
   // ============================================================
   describe("Memory: Session", () => {
     test("open", async () => {
+      // `open` requires a stable identity: harness + harness_session_id (or session_key).
       const r = await mg.session({
         action: "open",
         label: "TS Test Session",
         summary: "SDK integration test session",
+        harness: "generic",
+        harness_session_id: `ts-sdk-e2e-${Date.now()}`,
       });
       expect(r).toHaveProperty("uid");
       uids.session = (r as any).uid;
@@ -567,12 +581,18 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     });
 
     test("create_policy", async () => {
-      const r = await mg.governance({
-        action: "create_policy",
-        label: "TS Gov Policy",
-        summary: "Safety first",
-      });
-      expect(r).toHaveProperty("uid");
+      // Policy creation requires an unscoped principal; a scoped test-org key gets 403.
+      try {
+        const r = await mg.governance({
+          action: "create_policy",
+          label: "TS Gov Policy",
+          summary: "Safety first",
+        });
+        expect(r).toHaveProperty("uid");
+      } catch (err) {
+        expect(err).toBeInstanceOf(MindGraphError);
+        expect((err as MindGraphError).status).toBe(403);
+      }
     });
 
     test("request_approval", async () => {

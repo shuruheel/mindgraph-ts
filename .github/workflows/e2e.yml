@@ -39,4 +39,6 @@ jobs:
         env:
           MINDGRAPH_E2E: '1'
           API_KEY: ${{ secrets.MINDGRAPH_TEST_ORG_API_KEY }}
-          BASE_URL: ${{ github.event.inputs.base_url }}
+          # `inputs` applies the declared default on API dispatches; `github.event.inputs` does not.
+          # vitest clobbers BASE_URL with Vite's own value, so the suite reads MINDGRAPH_BASE_URL.
+          MINDGRAPH_BASE_URL: ${{ inputs.base_url || 'https://api.mindgraph.cloud' }}
