@@ -24,6 +24,8 @@ const rawBase = process.env.MINDGRAPH_BASE_URL ?? process.env.BASE_URL ?? "";
 const BASE_URL = /^https?:\/\//.test(rawBase) ? rawBase : "https://api.mindgraph.cloud";
 /** Live E2E is opt-in only: requires the explicit gate AND an API key. */
 const E2E_ENABLED = process.env.MINDGRAPH_E2E === "1" && !!API_KEY;
+/** Per-run suffix: write-time resolution answers an exact label/identity repeat with 409 near_duplicate. */
+const RUN = Date.now().toString(36);
 
 describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
   let mg: MindGraph;
@@ -64,7 +66,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("source", async () => {
       const r = await mg.capture({
         action: "source",
-        label: "TS SDK Test Source",
+        label: `TS SDK Test Source ${RUN}`,
         summary: "Integration test source",
         props: { uri: "https://example.com", title: "Example" },
       });
@@ -75,7 +77,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("snippet", async () => {
       const r = await mg.capture({
         action: "snippet",
-        label: "TS SDK Test Snippet",
+        label: `TS SDK Test Snippet ${RUN}`,
         summary: "A snippet from the source",
         source_uid: uids.source,
       });
@@ -85,7 +87,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("observation", async () => {
       const r = await mg.capture({
         action: "observation",
-        label: "TS SDK Test Observation",
+        label: `TS SDK Test Observation ${RUN}`,
         summary: "Something observed during testing",
         props: { content: "The SDK is working well" },
       });
@@ -98,8 +100,8 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("create", async () => {
       const r = await mg.entity({
         action: "create",
-        label: "TS SDK Test Entity",
-        props: { canonical_name: "ts-test-entity", entity_type: "concept" },
+        label: `TS SDK Test Entity ${RUN}`,
+        props: { canonical_name: `ts-test-entity-${RUN}`, entity_type: "concept" },
       });
       expect(r).toHaveProperty("uid");
       uids.entity = (r as any).uid;
@@ -133,8 +135,8 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     });
 
     test("findOrCreateEntity", async () => {
-      const r = await mg.findOrCreateEntity("TS SDK Find-or-Create", {
-        canonical_name: "ts-foc",
+      const r = await mg.findOrCreateEntity(`TS SDK Find-or-Create ${RUN}`, {
+        canonical_name: `ts-foc-${RUN}`,
       });
       expect(r).toHaveProperty("uid");
       uids.focEntity = r.uid;
@@ -148,7 +150,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("hypothesis", async () => {
       const r = await mg.inquire({
         action: "hypothesis",
-        label: "TS Hypothesis",
+        label: `TS Hypothesis ${RUN}`,
         summary: "If we test, then quality improves",
         props: { statement: "Testing leads to quality" },
       });
@@ -158,7 +160,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("theory", async () => {
       const r = await mg.inquire({
         action: "theory",
-        label: "TS Theory",
+        label: `TS Theory ${RUN}`,
         summary: "Theory of software reliability",
       });
       expect(r).toHaveProperty("uid");
@@ -167,7 +169,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("question", async () => {
       const r = await mg.inquire({
         action: "question",
-        label: "TS Question",
+        label: `TS Question ${RUN}`,
         summary: "How to improve coverage?",
         props: { question: "How to improve test coverage?" },
       });
@@ -177,7 +179,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("open_question", async () => {
       const r = await mg.inquire({
         action: "open_question",
-        label: "TS Open Question",
+        label: `TS Open Question ${RUN}`,
         summary: "What makes software good?",
         props: { question: "What makes software good?" },
       });
@@ -187,7 +189,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("assumption", async () => {
       const r = await mg.inquire({
         action: "assumption",
-        label: "TS Assumption",
+        label: `TS Assumption ${RUN}`,
         summary: "Tests are deterministic",
       });
       expect(r).toHaveProperty("uid");
@@ -196,7 +198,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("anomaly", async () => {
       const r = await mg.inquire({
         action: "anomaly",
-        label: "TS Anomaly",
+        label: `TS Anomaly ${RUN}`,
         summary: "Test passed when it should have failed",
       });
       expect(r).toHaveProperty("uid");
@@ -205,7 +207,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("paradigm", async () => {
       const r = await mg.inquire({
         action: "paradigm",
-        label: "TS Paradigm",
+        label: `TS Paradigm ${RUN}`,
         summary: "Test-driven development paradigm",
       });
       expect(r).toHaveProperty("uid");
@@ -215,9 +217,9 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
   describe("Epistemic: Argument", () => {
     test("argue", async () => {
       const r = await mg.argue({
-        claim: { label: "TS Claim", props: { statement: "SDKs should be tested" } },
+        claim: { label: `TS Claim ${RUN}`, props: { statement: "SDKs should be tested" } },
         evidence: [
-          { label: "TS Evidence", props: { statement: "Untested SDKs have more bugs" } },
+          { label: `TS Evidence ${RUN}`, props: { statement: "Untested SDKs have more bugs" } },
         ],
       });
       expect(r).toHaveProperty("claim_uid");
@@ -261,7 +263,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("goal", async () => {
       const r = await mg.commit({
         action: "goal",
-        label: "TS Goal",
+        label: `TS Goal ${RUN}`,
         summary: "Complete SDK integration tests",
       });
       expect(r).toHaveProperty("uid");
@@ -271,7 +273,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("project", async () => {
       const r = await mg.commit({
         action: "project",
-        label: "TS Project",
+        label: `TS Project ${RUN}`,
         summary: "SDK test project",
         parent_uid: uids.goal,
       });
@@ -282,7 +284,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("milestone", async () => {
       const r = await mg.commit({
         action: "milestone",
-        label: "TS Milestone",
+        label: `TS Milestone ${RUN}`,
         summary: "All tests passing",
         parent_uid: uids.project,
       });
@@ -294,7 +296,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("open_decision", async () => {
       const r = await mg.deliberate({
         action: "open_decision",
-        label: "TS Decision",
+        label: `TS Decision ${RUN}`,
         summary: "Which testing framework?",
       });
       expect(r).toHaveProperty("uid");
@@ -304,7 +306,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("add_option", async () => {
       const r = await mg.deliberate({
         action: "add_option",
-        label: "Option: Vitest",
+        label: `Option: Vitest ${RUN}`,
         summary: "Use vitest for testing",
         decision_uid: uids.decision,
       });
@@ -314,7 +316,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("add_constraint", async () => {
       const r = await mg.deliberate({
         action: "add_constraint",
-        label: "Must be fast",
+        label: `Must be fast ${RUN}`,
         summary: "Tests must run in under 60s",
         decision_uid: uids.decision,
       });
@@ -325,13 +327,13 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
       // Create an option to choose
       const opt = await mg.deliberate({
         action: "add_option",
-        label: "Option: Bun Test",
+        label: `Option: Bun Test ${RUN}`,
         summary: "Use bun test",
         decision_uid: uids.decision,
       });
       const r = await mg.deliberate({
         action: "resolve",
-        label: "Chose Bun Test",
+        label: `Chose Bun Test ${RUN}`,
         summary: "Bun test selected for speed",
         decision_uid: uids.decision,
         chosen_option_uid: (opt as any).uid,
@@ -353,7 +355,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("create_flow", async () => {
       const r = await mg.procedure({
         action: "create_flow",
-        label: "TS Test Flow",
+        label: `TS Test Flow ${RUN}`,
         summary: "SDK test workflow",
       });
       expect(r).toHaveProperty("uid");
@@ -363,7 +365,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("add_step", async () => {
       const r = await mg.procedure({
         action: "add_step",
-        label: "Step 1: Setup",
+        label: `Step 1: Setup ${RUN}`,
         summary: "Initialize test environment",
         flow_uid: uids.flow,
       });
@@ -373,7 +375,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("add_affordance", async () => {
       const r = await mg.procedure({
         action: "add_affordance",
-        label: "TS Affordance",
+        label: `TS Affordance ${RUN}`,
         summary: "Can run tests",
         props: { action_name: "run_tests" },
       });
@@ -383,7 +385,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("add_control", async () => {
       const r = await mg.procedure({
         action: "add_control",
-        label: "TS Control",
+        label: `TS Control ${RUN}`,
         summary: "Must pass linting first",
         props: { condition: "lint passes", action: "allow test run" },
       });
@@ -395,7 +397,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("assess", async () => {
       const r = await mg.risk({
         action: "assess",
-        label: "TS Risk",
+        label: `TS Risk ${RUN}`,
         summary: "SDK may have undiscovered bugs",
         props: { vulnerability: "untested paths", mitigation: "add more tests" },
       });
@@ -416,7 +418,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
       // `open` requires a stable identity: harness + harness_session_id (or session_key).
       const r = await mg.session({
         action: "open",
-        label: "TS Test Session",
+        label: `TS Test Session ${RUN}`,
         summary: "SDK integration test session",
         harness: "generic",
         harness_session_id: `ts-sdk-e2e-${Date.now()}`,
@@ -426,7 +428,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     });
 
     test("journal", async () => {
-      const r = await mg.journal("TS Journal Entry", {
+      const r = await mg.journal(`TS Journal Entry ${RUN}`, {
         content: "Testing the journal convenience method",
       }, { session_uid: uids.session });
       expect(r).toHaveProperty("uid");
@@ -435,7 +437,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("trace", async () => {
       const r = await mg.session({
         action: "trace",
-        label: "TS Trace",
+        label: `TS Trace ${RUN}`,
         summary: "Debug info logged",
         session_uid: uids.session,
       });
@@ -487,7 +489,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
   describe("Memory: Distill", () => {
     test("distill", async () => {
       const r = await mg.distill({
-        label: "TS Lesson Learned",
+        label: `TS Lesson Learned ${RUN}`,
         summary: "Integration tests catch real bugs",
         summarizes_uids: [uids.observation],
       });
@@ -499,7 +501,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("set_preference", async () => {
       const r = await mg.memoryConfig({
         action: "set_preference",
-        label: "TS Preference",
+        label: `TS Preference ${RUN}`,
         summary: "Prefer verbose output",
         props: { key: "output_verbosity", value: "verbose" },
       });
@@ -509,7 +511,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("set_policy", async () => {
       const r = await mg.memoryConfig({
         action: "set_policy",
-        label: "TS Policy",
+        label: `TS Policy ${RUN}`,
         summary: "Always run tests before commit",
         props: { principle: "test first" },
       });
@@ -534,7 +536,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("create_task", async () => {
       const r = await mg.plan({
         action: "create_task",
-        label: "TS Task",
+        label: `TS Task ${RUN}`,
         summary: "Write integration tests",
       });
       expect(r).toHaveProperty("uid");
@@ -543,7 +545,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("create_plan", async () => {
       const r = await mg.plan({
         action: "create_plan",
-        label: "TS Plan",
+        label: `TS Plan ${RUN}`,
         summary: "Master test plan",
       });
       expect(r).toHaveProperty("uid");
@@ -553,7 +555,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("add_step", async () => {
       const r = await mg.plan({
         action: "add_step",
-        label: "Plan Step 1",
+        label: `Plan Step 1 ${RUN}`,
         summary: "Setup fixtures",
         plan_uid: uids.plan,
       });
@@ -573,7 +575,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("set_budget", async () => {
       const r = await mg.governance({
         action: "set_budget",
-        label: "TS Budget",
+        label: `TS Budget ${RUN}`,
         summary: "Test resource budget",
         props: { description: "Budget for testing" },
       });
@@ -585,7 +587,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
       try {
         const r = await mg.governance({
           action: "create_policy",
-          label: "TS Gov Policy",
+          label: `TS Gov Policy ${RUN}`,
           summary: "Safety first",
         });
         expect(r).toHaveProperty("uid");
@@ -598,7 +600,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("request_approval", async () => {
       const r = await mg.governance({
         action: "request_approval",
-        label: "TS Approval",
+        label: `TS Approval ${RUN}`,
         summary: "Need approval for deployment",
       });
       expect(r).toHaveProperty("uid");
@@ -624,7 +626,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("start", async () => {
       const r = await mg.execution({
         action: "start",
-        label: "TS Execution",
+        label: `TS Execution ${RUN}`,
         summary: "Running tests",
       });
       expect(r).toHaveProperty("uid");
@@ -634,7 +636,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("complete", async () => {
       const r = await mg.execution({
         action: "complete",
-        label: "Done",
+        label: `Done ${RUN}`,
         summary: "Tests passed",
         execution_uid: uids.execution,
       });
@@ -644,12 +646,12 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("fail", async () => {
       const start = await mg.execution({
         action: "start",
-        label: "TS Fail Exec",
+        label: `TS Fail Exec ${RUN}`,
         summary: "Will fail",
       });
       const r = await mg.execution({
         action: "fail",
-        label: "Failed",
+        label: `Failed ${RUN}`,
         summary: "Something went wrong",
         execution_uid: (start as any).uid,
       });
@@ -659,7 +661,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("register_agent", async () => {
       const r = await mg.execution({
         action: "register_agent",
-        label: "TS Test Agent",
+        label: `TS Test Agent ${RUN}`,
         summary: "An integration test agent",
       });
       expect(r).toHaveProperty("uid");
@@ -792,7 +794,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
       // Create a temp node, tombstone it, then restore
       const node = await mg.capture({
         action: "observation",
-        label: "TS Evolve Temp",
+        label: `TS Evolve Temp ${RUN}`,
         summary: "Will be tombstoned",
       });
       const uid = (node as any).uid;
@@ -816,10 +818,10 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("addNode + getNode + updateNode + deleteNode", async () => {
       // Create
       const node = await mg.addNode({
-        label: "TS CRUD Node",
+        label: `TS CRUD Node ${RUN}`,
         props: {
           _type: "Entity",
-          canonical_name: "ts-crud",
+          canonical_name: `ts-crud-${RUN}`,
           description: "CRUD test",
         },
       });
@@ -896,7 +898,7 @@ describe.skipIf(!E2E_ENABLED)("MindGraph SDK Integration Tests", () => {
     test("tombstone + restore", async () => {
       const node = await mg.capture({
         action: "observation",
-        label: "TS Lifecycle Temp",
+        label: `TS Lifecycle Temp ${RUN}`,
         summary: "For tombstone/restore shortcut test",
       });
       const uid = (node as any).uid;
