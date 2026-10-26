@@ -1228,10 +1228,18 @@ export interface RetrieveContextResponse {
   };
 }
 
+/** Safe terminal reason. This does not authorize replaying a whole job. */
+export interface JobErrorDetails {
+  code: string;
+  message: string;
+  status: number;
+  retriable: boolean;
+}
+
 export interface Job {
   id: string;
   title: string;
-  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+  status: "pending" | "processing" | "completed" | "completed_with_errors" | "failed" | "cancelled";
   progress: {
     total_chunks: number;
     processed_chunks: number;
@@ -1240,6 +1248,8 @@ export interface Job {
   };
   result: Record<string, unknown> | null;
   error: string | null;
+  /** Absent for older servers or ordinary failures. */
+  error_details?: JobErrorDetails | null;
   created_at: number;
   queue_position?: number;
 }
@@ -1766,6 +1776,8 @@ export interface OntologySchema {
   propose_status?: "pending" | "running" | "ready" | "failed" | null;
   propose_job_id?: string | null;
   propose_error?: string | null;
+  /** Durable terminal reason; absent on older servers. Review partial drafts before retry. */
+  propose_error_details?: OntologyProposeErrorDetails | null;
   created_by?: string | null;
   updated_by?: string | null;
   created_at: string;
@@ -1922,7 +1934,11 @@ export interface OntologyProposal {
   approval_uid?: string | null;
   proposed_node_uid?: string | null;
   applied_job_id?: string | null;
+  /** Known result UID, including a partial result that needs reconciliation. */
+  applied_uid?: string | null;
   applied_error?: string | null;
+  /** A terminal execution failure; earlier graph changes may have committed. */
+  applied_error_details?: OntologyApplyErrorDetails | null;
   apply_attempt_count: number;
   edited_by?: string | null;
   edited_at?: string | null;
@@ -1931,6 +1947,16 @@ export interface OntologyProposal {
   created_at: string;
   resolved_at?: string | null;
   resolved_by?: string | null;
+}
+
+/** Proposal and apply failures share the safe terminal execution metadata. */
+export type OntologyProposeErrorDetails = OntologyApplyErrorDetails;
+
+export interface OntologyApplyErrorDetails {
+  code: string;
+  message: string;
+  status: number;
+  retriable: false;
 }
 
 export interface OntologyDuplicateAudit {
