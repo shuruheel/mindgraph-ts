@@ -1096,6 +1096,21 @@ export interface RetrieveContextRequest {
    * Windowed nodes then carry `valid_at_time` instead of `currently_valid`.
    */
   valid_at?: string;
+  /**
+   * World-time perspective: answer as of this ISO-8601 date. Nodes and
+   * chunks whose effective start is after the date are excluded; closed
+   * claims stay (annotated `valid_at_time: false`); undated nodes stay.
+   * Also sets the validity-annotation reference when `valid_at` is absent.
+   * Wiki articles are skipped under a time-scoped read.
+   */
+  as_of?: string;
+  /**
+   * Inclusive occurrence window (ISO-8601, imprecision ok): only nodes and
+   * chunks whose effective interval overlaps it are returned. Undated nodes
+   * are excluded under a window. Either bound may be omitted.
+   */
+  occurred_from?: string;
+  occurred_to?: string;
 }
 
 export interface ArticleResult {
@@ -1184,6 +1199,19 @@ export interface SeriesContextAnnotation {
 }
 
 export interface RetrieveContextResponse {
+  /**
+   * Present only when the request set `as_of`, `occurred_from` or
+   * `occurred_to`: the echoed filter plus what it excluded. World time only.
+   */
+  time_filter?: {
+    as_of?: string;
+    occurred_from?: string;
+    occurred_to?: string;
+    nodes_excluded: number;
+    chunks_excluded: number;
+    articles_excluded: boolean;
+    axis: "world_time";
+  };
   articles?: ArticleResult[];
   chunks?: {
     chunk_uid: string;
@@ -1202,6 +1230,10 @@ export interface RetrieveContextResponse {
         ingested_by?: string;
         /** Display name (else email) of the ingesting teammate. */
         ingested_by_name?: string;
+        /** When the source conversation or document occurred (ISO-8601). */
+        occurred_at?: string;
+        /** Publication date of the source document (ISO-8601). */
+        publication_date?: string;
       }[];
       source_chunks?: SourceChunk[];
       believed_by?: BelievedBy[];

@@ -508,6 +508,25 @@ describe("offline transport stub", () => {
   });
 });
 
+describe("retrieve context world-time filters", () => {
+  test("forwards as_of and the occurrence window unchanged", async () => {
+    installFetchStub({ graph: { nodes: [], edges: [] } });
+    const mg = newClient();
+    await mg.retrieveContext({
+      query: "pilot budget",
+      as_of: "2024-09-15",
+      occurred_from: "2024-01",
+      occurred_to: "2024-06",
+    });
+    expect(captured[0].body).toEqual({
+      query: "pilot budget",
+      as_of: "2024-09-15",
+      occurred_from: "2024-01",
+      occurred_to: "2024-06",
+    });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Contract-driven conformance: each cognitive method must build the request
 // that the canonical contract says it should.
