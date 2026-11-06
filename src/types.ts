@@ -1097,11 +1097,18 @@ export interface RetrieveContextRequest {
    */
   valid_at?: string;
   /**
-   * World-time perspective: answer as of this ISO-8601 date. Nodes and
-   * chunks whose effective start is after the date are excluded; closed
-   * claims stay (annotated `valid_at_time: false`); undated nodes stay.
-   * Also sets the validity-annotation reference when `valid_at` is absent.
-   * Wiki articles are skipped under a time-scoped read.
+   * Point-in-time perspective: answer with what had been **stated** by this
+   * ISO-8601 date. A node is admitted when at least one of its source
+   * documents was stated (`occurred_at`, else `publication_date`) on or
+   * before the date; its own fact dates never exclude it (a plan stated in
+   * June about next year is admitted). Nodes stated on both sides of the
+   * date keep only their earlier sources and withhold the merged summary
+   * (`spans_as_of`); undated nodes stay; closed claims stay (annotated
+   * `valid_at_time: false`). Also sets the validity-annotation reference
+   * when `valid_at` is absent. Wiki articles are skipped under a
+   * time-scoped read. The response's `time_filter.axis` is
+   * `statement_time`; use `occurred_from` / `occurred_to` for a fact-time
+   * window. (Server 1.14+: before, `as_of` filtered on fact time.)
    */
   as_of?: string;
   /**
