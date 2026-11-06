@@ -1116,6 +1116,22 @@ export interface RetrieveContextRequest {
    * chunks whose effective interval overlaps it are returned. Undated nodes
    * are excluded under a window. Either bound may be omitted.
    */
+  /**
+   * Evidence plan R2 (server 1.14+): `"text"` adds `context_text`,
+   * `used_tokens`, `truncated` and `omitted` — the canonical rendering every
+   * door shares (dated items, supersession and conflict markers, a hard
+   * budget). Default `"json"`.
+   */
+  format?: "json" | "text";
+  /** Token budget for `format: "text"` (minimum 256; default 8000). */
+  max_tokens?: number;
+  /** Order of `graph.nodes` in the JSON: `"rank"` (default) or `"chronological"`. */
+  sort?: "rank" | "chronological";
+  /**
+   * `"exhaustive"` widens retrieval for list/count questions; omitted lets
+   * the server's enumeration cue decide.
+   */
+  retrieval_mode?: "normal" | "exhaustive";
   occurred_from?: string;
   occurred_to?: string;
 }
@@ -1217,8 +1233,22 @@ export interface RetrieveContextResponse {
     nodes_excluded: number;
     chunks_excluded: number;
     articles_excluded: boolean;
-    axis: "world_time";
+    /** `statement_time` under `as_of` (server 1.14+), `world_time` under a window. */
+    axis: "world_time" | "statement_time";
+    /** Nodes short of `node_limit` after admission (server 1.14+). */
+    backfill_shortfall?: number;
   };
+  /** The "now" anchor: `as_of` when given, else the request date (server 1.14+). */
+  now?: string;
+  /** Unresolved contradiction pairs among the returned nodes (server 1.14+). */
+  conflicts?: Array<Record<string, unknown>>;
+  retrieval_mode?: "exhaustive";
+  retrieval_mode_source?: "request" | "cue";
+  /** Present with `format: "text"`. */
+  context_text?: string;
+  used_tokens?: number;
+  truncated?: boolean;
+  omitted?: { nodes: number; chunks: number; articles: number; conflicts: number; injections?: number };
   articles?: ArticleResult[];
   chunks?: {
     chunk_uid: string;
