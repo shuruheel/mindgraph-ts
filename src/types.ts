@@ -1097,11 +1097,18 @@ export interface RetrieveContextRequest {
    */
   valid_at?: string;
   /**
-   * World-time perspective: answer as of this ISO-8601 date. Nodes and
-   * chunks whose effective start is after the date are excluded; closed
-   * claims stay (annotated `valid_at_time: false`); undated nodes stay.
-   * Also sets the validity-annotation reference when `valid_at` is absent.
-   * Wiki articles are skipped under a time-scoped read.
+   * Point-in-time perspective: answer with what had been **stated** by this
+   * ISO-8601 date. A node is admitted when at least one of its source
+   * documents was stated (`occurred_at`, else `publication_date`) on or
+   * before the date; its own fact dates never exclude it (a plan stated in
+   * June about next year is admitted). Nodes stated on both sides of the
+   * date keep only their earlier sources and withhold the merged summary
+   * (`spans_as_of`); undated nodes stay; closed claims stay (annotated
+   * `valid_at_time: false`). Also sets the validity-annotation reference
+   * when `valid_at` is absent. Wiki articles are skipped under a
+   * time-scoped read. The response's `time_filter.axis` is
+   * `statement_time`; use `occurred_from` / `occurred_to` for a fact-time
+   * window. (Server 1.14+: before, `as_of` filtered on fact time.)
    */
   as_of?: string;
   /**
@@ -1109,6 +1116,22 @@ export interface RetrieveContextRequest {
    * chunks whose effective interval overlaps it are returned. Undated nodes
    * are excluded under a window. Either bound may be omitted.
    */
+  /**
+   * Evidence plan R2 (server 1.14+): `"text"` adds `context_text`,
+   * `used_tokens`, `truncated` and `omitted` — the canonical rendering every
+   * door shares (dated items, supersession and conflict markers, a hard
+   * budget). Default `"json"`.
+   */
+  format?: "json" | "text";
+  /** Token budget for `format: "text"` (minimum 256; default 8000). */
+  max_tokens?: number;
+  /** Order of `graph.nodes` in the JSON: `"rank"` (default) or `"chronological"`. */
+  sort?: "rank" | "chronological";
+  /**
+   * `"exhaustive"` widens retrieval for list/count questions; omitted lets
+   * the server's enumeration cue decide.
+   */
+  retrieval_mode?: "normal" | "exhaustive";
   occurred_from?: string;
   occurred_to?: string;
 }
@@ -1210,8 +1233,22 @@ export interface RetrieveContextResponse {
     nodes_excluded: number;
     chunks_excluded: number;
     articles_excluded: boolean;
-    axis: "world_time";
+    /** `statement_time` under `as_of` (server 1.14+), `world_time` under a window. */
+    axis: "world_time" | "statement_time";
+    /** Nodes short of `node_limit` after admission (server 1.14+). */
+    backfill_shortfall?: number;
   };
+  /** The "now" anchor: `as_of` when given, else the request date (server 1.14+). */
+  now?: string;
+  /** Unresolved contradiction pairs among the returned nodes (server 1.14+). */
+  conflicts?: Array<Record<string, unknown>>;
+  retrieval_mode?: "exhaustive";
+  retrieval_mode_source?: "request" | "cue";
+  /** Present with `format: "text"`. */
+  context_text?: string;
+  used_tokens?: number;
+  truncated?: boolean;
+  omitted?: { nodes: number; chunks: number; articles: number; conflicts: number; injections?: number };
   articles?: ArticleResult[];
   chunks?: {
     chunk_uid: string;
