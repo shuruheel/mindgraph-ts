@@ -2,6 +2,47 @@
 
 ## Unreleased
 
+## 0.17.0 (2026-11-10)
+
+`retrieveContext` catches up with the server: point-in-time recall, a
+token-budgeted text rendering, and the rerank and intent options. Everything
+here is additive. The new options need MindGraph Cloud or `mindgraph-server`
+1.14 or later; an older server ignores fields it does not know.
+
+### Added
+
+- **Point-in-time recall on `retrieveContext`.** `as_of` answers with what had
+  been stated by a date; `occurred_from` / `occurred_to` restrict results to an
+  occurrence window. The response carries a `time_filter` block with the echoed
+  filter and what it excluded.
+- **Text rendering with a token budget.** `format: "text"` adds `context_text`,
+  `used_tokens`, `truncated` and `omitted` to the response, bounded by
+  `max_tokens` (minimum 256, default 8000). `sort: "chronological"` orders
+  `graph.nodes` by date, and `retrieval_mode: "exhaustive"` widens retrieval
+  for list and count questions.
+- **Rerank and intent.** `rerank: true` applies the question-aware rerank to
+  graph-expansion candidates. `intent` (up to 2,000 characters) tells the
+  reranker what the caller is doing; it is never used as a search term and
+  never stored.
+- **More `retrieveContext` options:** `explain` (per-leg contributions on
+  direct nodes, unscoped callers only), `include_ledger`, `article_char_limit`,
+  `article_min_similarity` and `ontology` (`{ mode, schema_id }`).
+- **Response fields:** `now`, `conflicts` (unresolved contradiction pairs among
+  the returned nodes), `retrieval_mode` and `retrieval_mode_source`.
+- **`retrieve`:** the `merge_candidates` and `curation_counts` actions, and the
+  `include_ledger` and `source` request fields, are now in the types.
+- **Job and ontology failure details.** `Job.error_details` and an ontology
+  proposal's `applied_error_details` carry the server's typed error (`code`,
+  `status`, `retriable`), and `Job.status` includes `completed_with_errors`.
+
+### Changed
+
+- **`as_of` means statement time.** On server 1.14+ a node is admitted when one
+  of its source documents was stated on or before the date; its own fact dates
+  no longer exclude it. Use `occurred_from` / `occurred_to` for a fact-time
+  window. `time_filter.axis` says which applied.
+- Publishing uses npm trusted publishing (OIDC) with provenance.
+
 ## 0.16.0 (2026-10-02)
 
 The small-text memory fast path, a per-request deadline, and a reviewed retry

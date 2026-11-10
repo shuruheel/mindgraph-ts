@@ -859,7 +859,7 @@ export interface RetrieveRequest {
    * Retrieval action. Note: `"semantic"` requires a configured embedding
    * provider on the server; for semantic search use `retrieveContext()` instead.
    */
-  action: "text" | "semantic" | "hybrid" | "active_goals" | "open_questions" | "weak_claims" | "pending_approvals" | "unresolved_contradictions" | "stale_derivations" | "preferences" | "layer" | "recent";
+  action: "text" | "semantic" | "hybrid" | "active_goals" | "open_questions" | "weak_claims" | "pending_approvals" | "unresolved_contradictions" | "merge_candidates" | "stale_derivations" | "curation_counts" | "preferences" | "layer" | "recent";
   /**
    * Required for `"text"`, `"semantic"`, `"hybrid"`. Optional for
    * `"preferences"`: with a `query` you get topic-relevant preferences (the
@@ -903,6 +903,13 @@ export interface RetrieveRequest {
    * provenance for citing "which teammate's notes" (D3). Requires server ≥ 1.8.0.
    */
   include_sources?: boolean;
+  /** Re-admit operational ledger and work-state nodes, excluded by default. */
+  include_ledger?: boolean;
+  /**
+   * Post-filter on how the node was created: `"document"`, `"session"` or
+   * `"agent"`.
+   */
+  source?: "document" | "session" | "agent";
 }
 
 export interface TraverseRequest {
@@ -1134,6 +1141,40 @@ export interface RetrieveContextRequest {
   retrieval_mode?: "normal" | "exhaustive";
   occurred_from?: string;
   occurred_to?: string;
+  /**
+   * Re-admit operational ledger and work-state nodes (sessions, executions,
+   * tasks, plans). Excluded from knowledge retrieval by default.
+   */
+  include_ledger?: boolean;
+  /**
+   * Bound each article's `content` to this many characters by query-aware
+   * excerpting (default 6000; 0 = unlimited). The response flags `excerpted`.
+   */
+  article_char_limit?: number;
+  /** Cosine floor for admitted articles (default 0 = off). */
+  article_min_similarity?: number;
+  /**
+   * Attach per-leg hybrid contributions (`retrieval_legs`) to direct nodes.
+   * Honored only for unscoped callers.
+   */
+  explain?: boolean;
+  /**
+   * Ontology leg control: `mode` `"auto"` (default) or `"off"`, optionally
+   * restricted to one active schema. The leg runs only when the server has it
+   * enabled and the org has an active schema.
+   */
+  ontology?: { mode?: "auto" | "off"; schema_id?: string };
+  /**
+   * What the caller is doing right now (an agent's task, the last turns of a
+   * conversation), at most 2,000 characters. Read only by the question-aware
+   * reranker; never used as a search term and never stored.
+   */
+  intent?: string;
+  /**
+   * Apply the question-aware rerank to graph-expansion candidates. Omitted
+   * uses the server default (off).
+   */
+  rerank?: boolean;
 }
 
 export interface ArticleResult {
