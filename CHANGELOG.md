@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- **`idempotency_key` on `ingestSession`.** A request whose key already
+  produced a transcript returns that Document with `deduplicated: true` and an
+  empty `job_id`, so a retry after a timeout does not store the transcript
+  twice. Needs a server with mindgraph-rs#145; an older server ignores the key.
+  The client still never retries this call on its own.
+
 ## 0.17.0 (2026-11-10)
 
 `retrieveContext` catches up with the server: point-in-time recall, a
