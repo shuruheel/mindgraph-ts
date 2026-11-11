@@ -106,6 +106,22 @@ describe("corpus project wire contract", () => {
   });
 });
 
+describe("session ingest idempotency key", () => {
+  test("forwards the key and returns the replayed transcript", async () => {
+    installFetchStub({ job_id: "", document_uid: "doc-1", deduplicated: true });
+    const mg = newClient();
+
+    const reply = await mg.ingestSession({ content: "user: hello", session_uid: "s-1", idempotency_key: "batch-1" });
+    await mg.ingestSession({ content: "user: hello" });
+
+    expect(reply).toEqual({ job_id: "", document_uid: "doc-1", deduplicated: true });
+    expect(captured.map((request) => [request.url, request.body])).toEqual([
+      [`${BASE}/ingest/session`, { content: "user: hello", session_uid: "s-1", idempotency_key: "batch-1" }],
+      [`${BASE}/ingest/session`, { content: "user: hello" }],
+    ]);
+  });
+});
+
 describe("skill distill wire contract", () => {
   test("sends caller-authored skill props and provenance unchanged", async () => {
     installFetchStub({ uid: "skill-1", status: "candidate" });

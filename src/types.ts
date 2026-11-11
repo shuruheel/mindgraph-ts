@@ -1057,7 +1057,11 @@ export interface IngestDocumentRequest {
 export interface IngestDocumentResponse {
   job_id: string;
   document_uid: string;
-  /** True when the document was recognized as a duplicate and ingestion was skipped. */
+  /**
+   * True when the document was recognized as a duplicate and ingestion was
+   * skipped, or when a session ingest repeated an `idempotency_key`. `job_id`
+   * is empty in both cases.
+   */
   deduplicated?: boolean;
 }
 
@@ -1077,6 +1081,13 @@ export interface IngestSessionRequest {
   occurred_at?: string;
   /** Free-text context grounding attribution during extraction. */
   context?: string;
+  /**
+   * Makes a retry safe. A request whose key already produced a transcript
+   * returns that Document with `deduplicated: true` and an empty `job_id`
+   * instead of storing a second one. At most 255 bytes. A server that predates
+   * the key ignores it. The client never retries this call on its own.
+   */
+  idempotency_key?: string;
 }
 
 export interface RetrieveContextRequest {
