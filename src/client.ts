@@ -1,3 +1,4 @@
+import { MemoryClient, type MemoryScope, type MemoryOperation } from "./memory.js";
 import { canRetryRequest, errorFields, permitsRetry, retryDelayMs } from "./retry.js";
 import type {
   MindGraphConfig,
@@ -215,6 +216,12 @@ export class MindGraph {
         const text = await res.text().catch(() => "");
         let parsed: unknown;
         try { parsed = JSON.parse(text); } catch { parsed = text; }
+        const facade = path.startsWith("/memory/v1/");
+        const authenticatedError = res.status === 401 || res.status === 403;
+        if (facade && !authenticatedError && res.headers.get("x-mindgraph-contract") !== "memory.v1" &&
+            (res.status === 404 || res.status === 405 || typeof parsed === "string")) {
+          parsed = { code: "endpoint_unavailable", retriable: false };
+        }
         const err = new MindGraphError(
           `${method} ${path} failed: ${res.status}`,
           res.status,
@@ -231,6 +238,18 @@ export class MindGraph {
         throw err;
       }
       const text = await res.text();
+      if (path.startsWith("/memory/v1/")) {
+        let value: Record<string, unknown>;
+        try { value = JSON.parse(text); } catch { throw new MindGraphError("Incompatible memory response", res.status, { code: "incompatible_response" }); }
+        const sent = JSON.parse(init.body as string);
+        const scope = value?.scope as MemoryScope | undefined;
+        if (res.headers.get("x-mindgraph-contract") !== "memory.v1" || value?.contract !== "memory.v1" ||
+            scope?.space_uid !== sent.scope.space_uid || value.project_uid !== sent.project_uid ||
+            ((path.endsWith("/context") || path.endsWith("/profile")) && value.include_org_space !== (sent.include_org_space ?? false))) {
+          throw new MindGraphError("Incompatible memory response", res.status, { code: "incompatible_response" });
+        }
+        return value as T;
+      }
       if (!text) return undefined as T;
       return JSON.parse(text) as T;
     }
@@ -284,6 +303,39 @@ export class MindGraph {
 
   private del<T>(path: string): Promise<T> {
     return this.request<T>("DELETE", path);
+  }
+
+  /** Contracts fully implemented and enabled on the connected server. */
+  async contracts(): Promise<{ contracts: string[] }> {
+    try {
+      const value = await this.get<{ contracts: string[] }>("/memory/v1");
+      if (!value || !Array.isArray(value.contracts) || !value.contracts.every(c => typeof c === "string")) {
+        throw new MindGraphError("Invalid capability response", 200, { code: "endpoint_unavailable" });
+      }
+      return value;
+    } catch (error) {
+      if (error instanceof MindGraphError && (error.status === 401 || error.status === 403)) throw error;
+      throw new MindGraphError("Capability endpoint unavailable", error instanceof MindGraphError ? error.status : 0, { code: "endpoint_unavailable" });
+    }
+  }
+
+  memory(scope: MemoryScope): MemoryClient {
+    return new MemoryClient(scope, <T>(operation: MemoryOperation, body: object) => this.memoryRequest<T>(operation, body));
+  }
+
+  private async memoryRequest<T>(operation: MemoryOperation, body: object): Promise<T> {
+    try { return await this.post<T>(`/memory/v1/${operation}`, body); }
+    catch (error) {
+      if (!(error instanceof MindGraphError) || error.code !== "endpoint_unavailable") throw error;
+      let capability: { contracts: string[] };
+      try { capability = await this.contracts(); }
+      catch (discoveryError) {
+        if (discoveryError instanceof MindGraphError && (discoveryError.status === 401 || discoveryError.status === 403)) throw discoveryError;
+        throw error;
+      }
+      if (!capability.contracts.includes("memory.v1")) throw new MindGraphError("Server does not support memory.v1", error.status, { code: "unsupported_capability", retriable: false });
+      throw error;
+    }
   }
 
   // ---- Health ----

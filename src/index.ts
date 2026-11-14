@@ -149,3 +149,5 @@ export type {
   DomainObjectMutationResponse,
   DomainObject,
 } from "./types.js";
+
+export * from "./memory.js";
