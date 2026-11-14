@@ -1,5 +1,28 @@
 # mindgraph
 
+## Scoped memory API
+
+Requires a server advertising `memory.v1` and an SDK build exposing `memory()`.
+The bound Space selects within your credential's access; it grants no access.
+
+```ts
+const memory = client.memory({ space_uid: "space:project:alpha" });
+if (!(await client.contracts()).contracts.includes("memory.v1")) throw new Error("memory.v1 unavailable");
+await memory.remember("Use the staging cluster", { custom_id: "deploy-target" });
+const context = await memory.context({ query: "Which cluster?", format: "text", max_tokens: 1000 });
+const profile = await memory.profile({ format: "text" });
+const page = await memory.list({ limit: 20 });
+await memory.forget({ custom_id: "deploy-target" });
+```
+
+`include_org_space: true` explicitly adds permitted organization knowledge to
+context/profile. `project_uid` intersects reads with Project source membership.
+Inspect `complete`, `omitted`, `unavailable` and the named estimated-token budget.
+List cursors use live UID order. Keys are Space-local and separate from legacy
+organization-wide keys. Forget affects one node; cascade is unsupported. Failures
+never silently fall back to a legacy endpoint. See the [Memory API guide](https://mindgraph.cloud/docs/memory).
+
+
 [![npm](https://img.shields.io/npm/v/mindgraph)](https://www.npmjs.com/package/mindgraph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
