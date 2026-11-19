@@ -1237,7 +1237,17 @@ export class MindGraph {
   }
 
   async retrieveContext(req: RetrieveContextRequest): Promise<RetrieveContextResponse> {
-    return this.post("/retrieve/context", req);
+    const res = await this.post<RetrieveContextResponse>("/retrieve/context", req);
+    // A server that predates `known_on` ignores the field and answers from
+    // today's graph. Refuse that answer rather than hand it back under a date.
+    if (req.known_on !== undefined && typeof res?.known_on?.date !== "string") {
+      throw new MindGraphError(
+        "POST /retrieve/context ignored known_on: the server does not support the recorded-time read",
+        200,
+        { code: "known_on_ignored", retriable: false },
+      );
+    }
+    return res;
   }
 
   /** Backfill node_source provenance for existing graphs. */

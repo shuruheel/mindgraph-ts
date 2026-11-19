@@ -1153,6 +1153,22 @@ export interface RetrieveContextRequest {
   occurred_from?: string;
   occurred_to?: string;
   /**
+   * Recorded-time perspective: answer from what had been recorded by this
+   * moment, of what is still kept. A UTC date (`"2026-05-01"`, read as the end
+   * of that day) or date-time (`"2026-05-01T09:30:00Z"`). Items, links and
+   * sources recorded later are left out, so a correction recorded later does
+   * not mark the earlier claim as superseded. Kept items carry their current
+   * content, with `changed_since: true` when they changed after the bound.
+   * Deletion and access are today's at every date. Composes with `as_of` and
+   * `valid_at`, which read world time.
+   *
+   * Needs a server with the read enabled: one with it disabled answers 400
+   * `known_on_disabled`. A server that predates the field ignores it, so
+   * `retrieveContext` throws `known_on_ignored` when the response carries no
+   * `known_on` echo, instead of returning today's answer under a past date.
+   */
+  known_on?: string;
+  /**
    * Re-admit operational ledger and work-state nodes (sessions, executions,
    * tasks, plans). Excluded from knowledge retrieval by default.
    */
@@ -1289,6 +1305,22 @@ export interface RetrieveContextResponse {
     axis: "world_time" | "statement_time";
     /** Nodes short of `node_limit` after admission (server 1.14+). */
     backfill_shortfall?: number;
+  };
+  /**
+   * Present only when the request set `known_on` and the server honoured it:
+   * the echoed bound and what the read did under it.
+   */
+  known_on?: {
+    /** The request's value, echoed. */
+    date: string;
+    /** Returned items that changed after the bound. Omitted on the memory facade. */
+    changed_since?: number;
+    /** Graph expansion under the bound: skipped, or walked within it. */
+    expansion?: "skipped" | "bounded";
+    /** Wiki articles are compiled across time and are left out. */
+    articles?: "skipped";
+    /** The bound dropped candidates and fewer items than requested came back. */
+    pool_short?: boolean;
   };
   /** The "now" anchor: `as_of` when given, else the request date (server 1.14+). */
   now?: string;
