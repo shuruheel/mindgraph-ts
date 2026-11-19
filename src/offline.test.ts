@@ -524,6 +524,36 @@ describe("offline transport stub", () => {
   });
 });
 
+describe("retrieve context recorded-time read", () => {
+  test("forwards known_on and returns the echoed block", async () => {
+    installFetchStub({
+      graph: { nodes: [], edges: [] },
+      known_on: { date: "2026-05-01", changed_since: 0, expansion: "skipped", pool_short: false },
+    });
+    const mg = newClient();
+    const res = await mg.retrieveContext({ query: "contract term", known_on: "2026-05-01" });
+    expect(captured[0].body).toEqual({ query: "contract term", known_on: "2026-05-01" });
+    expect(res.known_on?.date).toBe("2026-05-01");
+  });
+
+  test("refuses an answer from a server that ignored known_on", async () => {
+    // Failure prevented: an older server drops the unknown field and returns
+    // today's graph, which the caller would read as the past.
+    installFetchStub({ graph: { nodes: [], edges: [] } });
+    const mg = newClient();
+    await expect(mg.retrieveContext({ query: "contract term", known_on: "2026-05-01" })).rejects.toMatchObject({
+      name: "MindGraphError",
+      code: "known_on_ignored",
+    });
+  });
+
+  test("a request without known_on needs no echo", async () => {
+    installFetchStub({ graph: { nodes: [], edges: [] } });
+    const mg = newClient();
+    await expect(mg.retrieveContext({ query: "contract term" })).resolves.toBeDefined();
+  });
+});
+
 describe("retrieve context world-time filters", () => {
   test("forwards as_of and the occurrence window unchanged", async () => {
     installFetchStub({ graph: { nodes: [], edges: [] } });
