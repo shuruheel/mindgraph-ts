@@ -237,11 +237,31 @@ See the [Operational Ontology](https://mindgraph.cloud/docs/ontology) and [Conne
 | Method | Description |
 |--------|-------------|
 | `ingestChunk(req)` | Ingest a single text chunk (sync): stores, embeds, and runs LLM extraction |
-| `ingestDocument(req)` | Ingest a full document (async): chunks text, returns job ID |
-| `ingestSession(req)` | Ingest a session transcript (async): links to session, returns job ID. With `idempotency_key`, a retry returns the first transcript instead of storing a second |
-| `retrieveContext(req)` | Direct retrieval plus optional cheapest-first graph expansion (`graph_expansion_limit`, `graph_max_depth`) |
-| `getJob(id)` | Get async job status and progress |
+| `ingestDocument(req)` | Ingest a full document (async): chunks text, returns `job_id`, `document_uid`, `generation_id`, and `attempt_id` |
+| `ingestSession(req)` | Ingest a session transcript (async): links to session, returns `job_id`, `document_uid`, `generation_id`, and `attempt_id`. With `idempotency_key`, a retry returns the first transcript instead of storing a second |
+| `getDocumentStatus(uid, opts?)` | Read authoritative document readiness (`document-status.v1`: `lexical`, `vector`, `extraction`, `attempt_state`, `job_available`) |
+| `waitForDocument(uid, opts?)` | Read-only bounded poll (`timeoutMs` in `[1, 300_000]`) until `until` (`"lexical" \| "vector" \| "extraction"`) is `"ready"`; pins `attemptId`, retries `409 status_changed` & `Retry-After`, throws typed errors (`DocumentSupersededError`, `ReadinessUnknownError`, `ReadinessNotRequestedError`, `DocumentIncompleteError`, `DocumentWaitTimeoutError`, `DocumentWaitCancelledError`) |
+| `resumeDocument(uid, opts?)` | Resume an incomplete document ingestion (`reprocess: true` allows redoing completed passes whose pipeline digest changed) |
+| `retrieveContext(req)` | Direct retrieval plus optional cheapest-first graph expansion (`graph_expansion_limit`, `graph_max_depth`, `known_on`) |
+| `getJob(id)` | Get in-memory async job status and progress |
 | `clearGraph()` | Clear all graph data |
+
+#### Waiting for document readiness (`document-status.v1`)
+
+```ts
+const receipt = await graph.ingestDocument({
+  content: fullText,
+  title: "Q4 Architecture Review",
+});
+
+// Pins attemptId so a replacement attempt raises DocumentSupersededError rather than resolving silently.
+const status = await graph.waitForDocument(receipt.document_uid, {
+  attemptId: receipt.attempt_id ?? undefined,
+  until: "extraction",
+  timeoutMs: 60_000,
+});
+console.log(status.readiness); // { lexical: "ready", vector: "ready", extraction: "ready" }
+```
 
 ### Lifecycle Shortcuts
 
