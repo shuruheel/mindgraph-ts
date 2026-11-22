@@ -1063,6 +1063,95 @@ export interface IngestDocumentResponse {
    * is empty in both cases.
    */
   deduplicated?: boolean;
+  /** Persisted status for a reused document, or `"processing"` for a new job. */
+  processing_status?: string;
+  /** Present on dedup when a requested ontology schema could not be applied. */
+  ontology_schema_not_applied?: string;
+  /** Immutable generation manifest ID (`document-status.v1`); `null` when flag-off or legacy dedup. */
+  generation_id?: string | null;
+  /** Durable execution attempt ID (`document-status.v1`); `null` when flag-off or legacy dedup. */
+  attempt_id?: string | null;
+}
+
+export interface ResumeDocumentRequest {
+  layers?: string[];
+  agent_id?: string;
+  /** Spend guard (`document-status.v1`): must be `true` to redo completed passes whose pipeline digest changed. */
+  reprocess?: boolean;
+}
+
+export interface ResumeDocumentResponse {
+  job_id: string;
+  document_uid: string;
+  chunks_to_resume: number;
+  total_chunks?: number;
+  /** Immutable generation manifest ID (`document-status.v1`); `null` when flag-off. */
+  generation_id?: string | null;
+  /** Durable execution attempt ID (`document-status.v1`); `null` when flag-off. */
+  attempt_id?: string | null;
+}
+
+// ---- Document Readiness Lifecycle (document-status.v1) ----
+
+export type ReadinessDimension = "lexical" | "vector" | "extraction";
+
+export type DimensionState = "ready" | "not_ready" | "unknown" | "not_requested";
+
+export type AttemptState =
+  | "running"
+  | "completed"
+  | "partial"
+  | "failed"
+  | "cancelled"
+  | "cancelled_by_deletion"
+  | "interrupted"
+  | "failed_abandoned";
+
+export interface DocumentStatusReadiness {
+  lexical: DimensionState;
+  vector: DimensionState;
+  extraction: DimensionState;
+}
+
+export interface DocumentStatusError {
+  code: string;
+  message: string;
+  retriable: boolean;
+}
+
+export interface DocumentStatus {
+  contract: "document-status.v1";
+  document_uid: string;
+  document_version: number;
+  generation_id: string | null;
+  attempt_id: string | null;
+  job_id: string | null;
+  job_available: boolean;
+  processing_status: string;
+  attempt_state: AttemptState | null;
+  content_revision: string | null;
+  pipeline_digest: string | null;
+  readiness: DocumentStatusReadiness;
+  observed_at: string;
+  error: DocumentStatusError | null;
+}
+
+export interface GetDocumentStatusOptions {
+  /** Cancels the status HTTP request. */
+  signal?: AbortSignal;
+}
+
+export interface WaitForDocumentOptions {
+  /** Recommended: pass receipt.attempt_id. If omitted, pins first observed non-null attempt_id. */
+  attemptId?: string;
+  /** Target readiness dimension to wait for. Default: `"extraction"`. */
+  until?: ReadinessDimension;
+  /** Total wait deadline in ms. Default: `60_000`; must be a finite integer in `[1, 300_000]`. */
+  timeoutMs?: number;
+  /** Poll interval in ms. Default: `1_000`; clamped `>= 100` ms. */
+  intervalMs?: number;
+  /** Cancels client polling ONLY; never cancels the server job or resubmits content. */
+  signal?: AbortSignal;
 }
 
 export interface IngestSessionRequest {

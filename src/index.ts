@@ -1,4 +1,15 @@
-export { MindGraph, MindGraphError } from "./client.js";
+export {
+  MindGraph,
+  MindGraphError,
+  DOCUMENT_STATUS_CONTRACT,
+  ValidationError,
+  ReadinessUnknownError,
+  DocumentSupersededError,
+  ReadinessNotRequestedError,
+  DocumentIncompleteError,
+  DocumentWaitTimeoutError,
+  DocumentWaitCancelledError,
+} from "./client.js";
 export type {
   MindGraphConfig,
   GraphNode,
@@ -62,6 +73,16 @@ export type {
   IngestDocumentRequest,
   IngestDocumentResponse,
   IngestSessionRequest,
+  ResumeDocumentRequest,
+  ResumeDocumentResponse,
+  ReadinessDimension,
+  DimensionState,
+  AttemptState,
+  DocumentStatusReadiness,
+  DocumentStatusError,
+  DocumentStatus,
+  GetDocumentStatusOptions,
+  WaitForDocumentOptions,
   Participant,
   RetrieveContextRequest,
   RetrieveContextResponse,
