@@ -913,7 +913,7 @@ export interface RetrieveRequest {
 }
 
 export interface TraverseRequest {
-  action: "chain" | "neighborhood" | "path" | "subgraph" | "top_k_paths";
+  action: "chain" | "neighborhood" | "path" | "subgraph" | "top_k_paths" | "epistemic_support";
   start_uid: string;
   end_uid?: string;
   max_depth?: number;
@@ -925,9 +925,9 @@ export interface TraverseRequest {
   include_provenance?: boolean;
   /** Global distinct-node budget, including the seed (default 500). */
   max_nodes?: number;
-  /** `top_k_paths` only: number of cheapest paths to return (default 3, cap 25). */
+  /** `top_k_paths` / `epistemic_support`: number of chains/paths to return (default 3, cap 25). */
   k?: number;
-  /** `top_k_paths` only: max edges per path (default 8, cap 16). */
+  /** `top_k_paths` (default 8, cap 16) / `epistemic_support` (default 6, cap 12): max edges per path. */
   max_hops?: number;
   /** `top_k_paths` only: prune paths whose min-plus cost exceeds this. */
   max_cost?: number;
@@ -941,6 +941,37 @@ export interface ScoredPath {
   labels: string[];
   /** Σ −ln(weight) along the path; lower = stronger evidence chain. */
   cost: number;
+}
+
+/** EA7 Use 2 survival classification composing invalidation/supersession/contradiction
+ * signals with surviving multi-hop epistemic support chains. */
+export type SupportSurvivalStatus =
+  | "supported"
+  | "unbacked"
+  | "partially_invalidated"
+  | "unsupported_invalidated";
+
+/** One weighted epistemic support chain returned by `POST /traverse` (`action: "epistemic_support"`). */
+export interface EpistemicSupportChain {
+  node_uids: string[];
+  labels: string[];
+  /** Cumulative log-space cost Σ −ln(clamp(edge.confidence * premise.confidence, 1e-9, 1)). */
+  support_cost: number;
+  /** `exp(-support_cost)` clamped to `[0, 1]`; ranking/triage score, not a Bayesian posterior. */
+  derived_confidence: number;
+  hop_count: number;
+}
+
+/** Response from `POST /traverse` with `action: "epistemic_support"` (`EA7` Use 2). */
+export interface EpistemicSupportResponse {
+  mode: "epistemic_support";
+  start_uid: string;
+  k: number;
+  max_hops: number;
+  has_broken_dependency: boolean;
+  survival_status: SupportSurvivalStatus;
+  score_semantics: "ranking_triage_not_bayesian_posterior";
+  chains: EpistemicSupportChain[];
 }
 
 export interface EvolveRequest {

@@ -692,6 +692,39 @@ describe("field-name conventions", () => {
     expect("to_uid" in body).toBe(false);
   });
 
+  test("epistemicSupport calls POST /traverse with action epistemic_support", async () => {
+    installFetchStub({
+      mode: "epistemic_support",
+      start_uid: "c1",
+      k: 2,
+      max_hops: 4,
+      has_broken_dependency: true,
+      survival_status: "partially_invalidated",
+      score_semantics: "ranking_triage_not_bayesian_posterior",
+      chains: [
+        {
+          node_uids: ["c1", "e2"],
+          labels: ["Conclusion", "Evidence 2"],
+          support_cost: 0.5798,
+          derived_confidence: 0.56,
+          hop_count: 1,
+        },
+      ],
+    });
+    const mg = newClient();
+    const res = await mg.epistemicSupport("c1", { k: 2, max_hops: 4 });
+    expect(captured[0].url).toBe(`${BASE}/traverse`);
+    expect(captured[0].body).toEqual({
+      action: "epistemic_support",
+      start_uid: "c1",
+      k: 2,
+      max_hops: 4,
+    });
+    expect(res.survival_status).toBe("partially_invalidated");
+    expect(res.score_semantics).toBe("ranking_triage_not_bayesian_posterior");
+    expect(res.chains).toHaveLength(1);
+  });
+
   test("typed traversal shortcuts normalize serde-tagged custom edge types", async () => {
     installFetchStub({
       mode: "neighborhood",

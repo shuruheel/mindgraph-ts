@@ -63,6 +63,7 @@ import type {
   ExecutionRequest,
   RetrieveRequest,
   TraverseRequest,
+  EpistemicSupportResponse,
   EvolveRequest,
   IngestChunkRequest,
   IngestChunkResponse,
@@ -1191,6 +1192,19 @@ export class MindGraph {
       max_depth: maxDepth,
     });
     return pathSteps(r);
+  }
+
+  /** EA7 Use 2: top-k weighted epistemic support chains & alternative-proof survival. */
+  async epistemicSupport(
+    uid: string,
+    opts?: { k?: number; max_hops?: number },
+  ): Promise<EpistemicSupportResponse> {
+    return this.post("/traverse", {
+      action: "epistemic_support",
+      start_uid: uid,
+      ...(opts?.k !== undefined ? { k: opts.k } : {}),
+      ...(opts?.max_hops !== undefined ? { max_hops: opts.max_hops } : {}),
+    });
   }
 
   async subgraph(uid: string, opts?: {

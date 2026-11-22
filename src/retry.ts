@@ -10,7 +10,7 @@ const READ_ACTIONS: Record<string, readonly string[]> = {
   "/retrieve": ["text", "semantic", "hybrid", "active_goals", "open_questions",
     "preferences", "weak_claims", "pending_approvals", "unresolved_contradictions",
     "merge_candidates", "stale_derivations", "curation_counts", "layer", "recent"],
-  "/traverse": ["chain", "top_k_paths", "neighborhood", "path", "subgraph"],
+  "/traverse": ["chain", "top_k_paths", "epistemic_support", "neighborhood", "path", "subgraph"],
   "/reality/series": ["window", "aggregate", "latest", "list_for_entity", "batch_latest", "batch_aggregate"],
   "/intent/deliberation": ["get_open"],
   "/action/risk": ["get_assessments"],
