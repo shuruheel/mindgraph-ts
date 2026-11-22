@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.20.0 (2026-11-22)
+
+Adds **EA7 Use 2** weighted epistemic support chains and alternative-proof survival (`POST /traverse` `action: "epistemic_support"`), exported TypeScript response types, and read-only retry classification.
+
+### Added
+
+- **Epistemic support chains & survival status (`EA7` Use 2, `#26`).** Added
+  `"epistemic_support"` to `TraverseRequest.action` and read-only
+  `READ_ACTIONS["/traverse"]`, exported `SupportSurvivalStatus`,
+  `EpistemicSupportChain`, `EpistemicSupportResponse`, and `ScoredPath`, and
+  added `MindGraph.epistemicSupport(uid, { k?, max_hops? })` exposing ranked
+  multi-hop justification chains and survival status (`supported`, `unbacked`,
+  `partially_invalidated`, `unsupported_invalidated`) with explicit
+  `ranking_triage_not_bayesian_posterior` score semantics.
+
 ## 0.19.0 (2026-11-22)
 
 Adds Document Readiness Lifecycle (`document-status.v1`) inspection and bounded wait helpers (`getDocumentStatus`, `waitForDocument`), typed readiness errors, additive `generation_id`/`attempt_id` receipts, and `resumeDocument` `reprocess` support.
