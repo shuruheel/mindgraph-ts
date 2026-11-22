@@ -1,10 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.19.0 (2026-11-22)
+
+Adds Document Readiness Lifecycle (`document-status.v1`) inspection and bounded wait helpers (`getDocumentStatus`, `waitForDocument`), typed readiness errors, additive `generation_id`/`attempt_id` receipts, and `resumeDocument` `reprocess` support.
 
 ### Added
 
-- **Document Readiness Lifecycle (`document-status.v1`, RL4).** Added
+- **Document Readiness Lifecycle (`document-status.v1`, RL4 & RL5).** Added
   `getDocumentStatus(documentUid, opts?)` and `waitForDocument(documentUid, opts?)`
   with attempt pinning, `attempt_state`-only active/terminal classification,
   transparent `409 status_changed` retry, RFC 9110 `Retry-After` clamping to
@@ -13,8 +15,8 @@
   `DocumentSupersededError`, `ReadinessNotRequestedError`,
   `DocumentIncompleteError`, `DocumentWaitTimeoutError`,
   `DocumentWaitCancelledError`), additive `generation_id`/`attempt_id` receipt
-  typings on `IngestDocumentResponse` and `ResumeDocumentResponse`, and
-  optional `reprocess` on `resumeDocument`.
+  typings on `IngestDocumentResponse` and `ResumeDocumentResponse`, optional
+  `reprocess` on `resumeDocument`, and README contract examples.
 
 ## 0.18.0
 
