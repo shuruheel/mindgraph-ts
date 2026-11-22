@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Document Readiness Lifecycle (`document-status.v1`, RL4).** Added
+  `getDocumentStatus(documentUid, opts?)` and `waitForDocument(documentUid, opts?)`
+  with attempt pinning, `attempt_state`-only active/terminal classification,
+  transparent `409 status_changed` retry, RFC 9110 `Retry-After` clamping to
+  deadline, synchronous `ValidationError` bounds checks (`timeoutMs` in
+  `[1, 300_000]`), typed errors (`ValidationError`, `ReadinessUnknownError`,
+  `DocumentSupersededError`, `ReadinessNotRequestedError`,
+  `DocumentIncompleteError`, `DocumentWaitTimeoutError`,
+  `DocumentWaitCancelledError`), additive `generation_id`/`attempt_id` receipt
+  typings on `IngestDocumentResponse` and `ResumeDocumentResponse`, and
+  optional `reprocess` on `resumeDocument`.
+
 ## 0.18.0
 
 ### Memory API v1

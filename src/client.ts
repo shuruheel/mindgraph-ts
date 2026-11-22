@@ -1,5 +1,25 @@
 import { MemoryClient, type MemoryScope, type MemoryOperation } from "./memory.js";
-import { canRetryRequest, errorFields, permitsRetry, retryDelayMs } from "./retry.js";
+import { canRetryRequest, permitsRetry, retryDelayMs } from "./retry.js";
+import { MindGraphError } from "./errors.js";
+import {
+  defaultSleep,
+  runWaitForDocumentLoop,
+  validateDocumentStatusPayload,
+  validateWaitForDocumentOptions,
+  type RawStatusResponse,
+  type WaitClock,
+} from "./document-lifecycle.js";
+export { MindGraphError } from "./errors.js";
+export {
+  DOCUMENT_STATUS_CONTRACT,
+  ValidationError,
+  ReadinessUnknownError,
+  DocumentSupersededError,
+  ReadinessNotRequestedError,
+  DocumentIncompleteError,
+  DocumentWaitTimeoutError,
+  DocumentWaitCancelledError,
+} from "./document-lifecycle.js";
 import type {
   MindGraphConfig,
   GraphNode,
@@ -49,6 +69,11 @@ import type {
   IngestDocumentRequest,
   IngestDocumentResponse,
   IngestSessionRequest,
+  ResumeDocumentRequest,
+  ResumeDocumentResponse,
+  DocumentStatus,
+  GetDocumentStatusOptions,
+  WaitForDocumentOptions,
   RetrieveContextRequest,
   RetrieveContextResponse,
   Job,
@@ -134,22 +159,6 @@ function pathSteps(response: unknown): PathStep[] {
   });
 }
 
-export class MindGraphError extends Error {
-  public readonly code?: string;
-  public readonly retriable?: boolean;
-  constructor(
-    message: string,
-    public status: number,
-    public body?: unknown,
-  ) {
-    super(message);
-    this.name = "MindGraphError";
-    const fields = errorFields(body);
-    this.code = fields.code;
-    this.retriable = fields.retriable;
-  }
-}
-
 export class MindGraph {
   private baseUrl: string;
   private headers: Record<string, string>;
@@ -188,7 +197,12 @@ export class MindGraph {
 
   // ---- HTTP helpers ----
 
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    signal?: AbortSignal,
+  ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     // One id per logical call, retained across 503 retries.
     const requestId = createRequestId();
@@ -211,7 +225,7 @@ export class MindGraph {
 
     let lastError: MindGraphError | undefined;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-      const res = await this.fetchWithDeadline(url, init, method, path);
+      const res = await this.fetchWithDeadline(url, init, method, path, signal);
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         let parsed: unknown;
@@ -232,7 +246,8 @@ export class MindGraph {
         if (res.status === 503 && retrySafe && permitsRetry(err) && attempt < this.maxRetries) {
           lastError = err;
           const delay = retryDelayMs(res.headers.get("retry-after"), this.retryBackoffMs, attempt);
-          await new Promise((r) => setTimeout(r, delay));
+          await defaultSleep(delay, signal);
+          if (signal?.aborted) throw signal.reason ?? new DOMException("Aborted", "AbortError");
           continue;
         }
         throw err;
@@ -260,25 +275,48 @@ export class MindGraph {
    * One HTTP attempt. With `timeoutMs` set, the attempt is aborted at the
    * deadline and surfaces as a non-retriable `MindGraphError` (`code:
    * "timeout"`, `status: 0`). Without it the request is sent unchanged — no
-   * AbortSignal is attached, preserving the pre-0.16 behaviour.
+   * AbortSignal is attached unless the caller supplied `signal`, preserving the
+   * pre-0.16 behaviour.
    */
   private async fetchWithDeadline(
     url: string,
     init: RequestInit,
     method: string,
     path: string,
+    signal?: AbortSignal,
+    overrideTimeoutMs?: number,
   ): Promise<Response> {
-    if (this.timeoutMs === undefined) {
+    const effectiveTimeout =
+      overrideTimeoutMs !== undefined && this.timeoutMs !== undefined
+        ? Math.min(overrideTimeoutMs, this.timeoutMs)
+        : (overrideTimeoutMs ?? this.timeoutMs);
+
+    if (effectiveTimeout === undefined && !signal) {
       return fetch(url, init);
     }
+    if (effectiveTimeout === undefined && signal) {
+      return fetch(url, { ...init, signal });
+    }
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    let timedOut = false;
+    const onCallerAbort = () => controller.abort(signal?.reason);
+    if (signal) {
+      if (signal.aborted) {
+        controller.abort(signal.reason);
+      } else {
+        signal.addEventListener("abort", onCallerAbort, { once: true });
+      }
+    }
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, effectiveTimeout);
     try {
       return await fetch(url, { ...init, signal: controller.signal });
     } catch (error) {
-      if (controller.signal.aborted) {
+      if (timedOut && !signal?.aborted) {
         throw new MindGraphError(
-          `${method} ${path} timed out after ${this.timeoutMs}ms`,
+          `${method} ${path} timed out after ${effectiveTimeout}ms`,
           0,
           { error: "timeout", code: "timeout", retriable: false },
         );
@@ -286,6 +324,7 @@ export class MindGraph {
       throw error;
     } finally {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", onCallerAbort);
     }
   }
 
@@ -1275,9 +1314,112 @@ export class MindGraph {
   /** Resume ingestion of a document that has failed chunks. */
   async resumeDocument(
     docUid: string,
-    opts?: { layers?: string[]; agent_id?: string },
-  ): Promise<{ job_id: string; document_uid: string; chunks_to_resume: number }> {
+    opts?: ResumeDocumentRequest,
+  ): Promise<ResumeDocumentResponse> {
     return this.post(`/ingest/resume/${seg(docUid)}`, opts ?? {});
+  }
+
+  /**
+   * Read authoritative document readiness status (`document-status.v1`).
+   * Strictly read-only.
+   */
+  async getDocumentStatus(
+    documentUid: string,
+    opts?: GetDocumentStatusOptions,
+  ): Promise<DocumentStatus> {
+    const raw = await this.request<unknown>(
+      "GET",
+      `/ingest/document/${seg(documentUid)}/status`,
+      undefined,
+      opts?.signal,
+    );
+    return validateDocumentStatusPayload(raw, 200);
+  }
+
+  /**
+   * Poll `GET /ingest/document/{uid}/status` until the requested readiness
+   * dimension reaches `"ready"`, pinning the attempt ID and never following a
+   * successor attempt silently. Validates options synchronously before issuing
+   * any HTTP request. Strictly read-only: timeout and cancellation never
+   * cancel jobs, delete documents, or resubmit content.
+   */
+  waitForDocument(
+    documentUid: string,
+    opts?: WaitForDocumentOptions,
+  ): Promise<DocumentStatus> {
+    const validated = validateWaitForDocumentOptions(opts);
+    return this.runWaitForDocument(documentUid, validated, opts?.signal);
+  }
+
+  private async runWaitForDocument(
+    documentUid: string,
+    opts: ReturnType<typeof validateWaitForDocumentOptions>,
+    signal?: AbortSignal,
+    clock?: WaitClock,
+  ): Promise<DocumentStatus> {
+    const path = `/ingest/document/${seg(documentUid)}/status`;
+    const url = `${this.baseUrl}${path}`;
+    const fetchOnce = async (
+      remainingMs: number,
+      callSignal?: AbortSignal,
+    ): Promise<RawStatusResponse> => {
+      const requestId = createRequestId();
+      const init: RequestInit = {
+        method: "GET",
+        headers: {
+          ...this.headers,
+          "X-MindGraph-Request-ID": requestId,
+          ...(this.telemetrySurface
+            ? { "X-MindGraph-Surface": this.telemetrySurface }
+            : {}),
+        },
+      };
+      // Keep the per-poll AbortController timer and caller signal listener
+      // active across BOTH headers and body read (res.text()), bounded directly
+      // by waitForDocument's remainingMs (never truncated by a shorter client timeoutMs).
+      const controller = new AbortController();
+      let timedOut = false;
+      const onCallerAbort = () => controller.abort(callSignal?.reason);
+      if (callSignal) {
+        if (callSignal.aborted) {
+          controller.abort(callSignal.reason);
+        } else {
+          callSignal.addEventListener("abort", onCallerAbort, { once: true });
+        }
+      }
+      const timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, remainingMs);
+      try {
+        const res = await fetch(url, { ...init, signal: controller.signal });
+        const text = await res.text();
+        let parsed: unknown;
+        try {
+          parsed = text ? JSON.parse(text) : undefined;
+        } catch {
+          parsed = text;
+        }
+        return {
+          status: res.status,
+          body: parsed,
+          retryAfter: res.headers.get("retry-after"),
+        };
+      } catch (error) {
+        if (timedOut && !callSignal?.aborted) {
+          throw new MindGraphError(
+            `GET ${path} timed out after ${remainingMs}ms`,
+            0,
+            { error: "timeout", code: "timeout", retriable: false },
+          );
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
+        callSignal?.removeEventListener("abort", onCallerAbort);
+      }
+    };
+    return runWaitForDocumentLoop(documentUid, opts, fetchOnce, signal, clock);
   }
 
   /** Delete a document and all its chunks and extracted nodes. */
