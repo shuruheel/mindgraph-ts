@@ -29,6 +29,15 @@ describe("engine failure retry contract", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  test("navigation moves are reads and are retried on 503", async () => {
+    vi.useFakeTimers();
+    const fetcher = transport({ code: "query_admission_busy", retriable: true }, 503, "0.001");
+    const result = client().navigate({ action: "search", query: "rollback" });
+    await vi.runAllTimersAsync();
+    await result;
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
   test("terminal maintenance code also stops retries from older producers", async () => {
     const fetcher = transport({ code: "vector_index_rebuilding" });
     await expect(client().getNode("node")).rejects.toBeInstanceOf(MindGraphError);

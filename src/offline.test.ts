@@ -725,6 +725,108 @@ describe("field-name conventions", () => {
     expect(res.chains).toHaveLength(1);
   });
 
+  test("navigate sends a listing move to POST /navigate unchanged", async () => {
+    installFetchStub({
+      move: "follow",
+      from: ["n:cause"],
+      state: "found",
+      shown: 1,
+      more_available: 2,
+      stopped: "item limit (1)",
+      items: [
+        {
+          handle: "n:fix",
+          uid: "fix",
+          type: "Decision",
+          title: "Ship 2.4.1",
+          text: "Ship 2.4.1 to every tenant",
+          reached: "decided from [n:cause]",
+          standing: { state: "current" },
+        },
+      ],
+      bad_handles: [],
+      notes: [],
+      next: [{ action: "more", token: "nv1.abc" }, { action: "follow", handles: ["n:fix"] }],
+      token: "nv1.abc",
+      budget_tokens: 4000,
+      used_tokens: 60,
+      text: "follow from [n:cause] · 1 items shown",
+    });
+    const mg = newClient();
+    const res = await mg.navigate({
+      action: "follow",
+      handles: ["n:cause"],
+      direction: "out",
+      depth: 2,
+      limit: 1,
+    });
+    expect(captured[0].url).toBe(`${BASE}/navigate`);
+    expect(captured[0].method).toBe("POST");
+    expect(captured[0].body).toEqual({
+      action: "follow",
+      handles: ["n:cause"],
+      direction: "out",
+      depth: 2,
+      limit: 1,
+    });
+    expect(res.state).toBe("found");
+    expect(res.items[0].handle).toBe("n:fix");
+    expect(res.next[0]).toEqual({ action: "more", token: "nv1.abc" });
+
+    await mg.navigate({ action: "more", token: res.token! });
+    expect(captured[1].body).toEqual({ action: "more", token: "nv1.abc" });
+  });
+
+  test("navigate context returns the working-set block", async () => {
+    installFetchStub({
+      graph: { nodes: [], edges: [] },
+      context_text: "rendered",
+      working_set: {
+        token: "ws1.t",
+        turn: 2,
+        reread: false,
+        entered: [{ uid: "a", label: "A" }],
+        kept: [],
+        left: [{ uid: "b", label: "B", reason: "faded" }],
+        changed: [],
+        strength: { nothing_strong: false },
+        parameters: { rounds: 3, cue_decay: 0.7, cue_horizon_turns: 8, pool_min: 64, cues: 2, pins: 0, drops: 0 },
+      },
+    });
+    const mg = newClient();
+    const res = await mg.navigate({
+      action: "context",
+      text: "pool limit",
+      token: "ws1.prev",
+      focus: ["n:cause"],
+    });
+    expect(captured[0].url).toBe(`${BASE}/navigate`);
+    expect(captured[0].body).toEqual({
+      action: "context",
+      text: "pool limit",
+      token: "ws1.prev",
+      focus: ["n:cause"],
+    });
+    expect(res.working_set?.token).toBe("ws1.t");
+    expect(res.working_set?.left[0].reason).toBe("faded");
+  });
+
+  test("navigate surfaces an unbuilt move as a typed error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({ error: "the `check` move is not built yet", code: "move_not_built" }),
+          { status: 501 },
+        ),
+      ),
+    );
+    await expect(newClient().navigate({ action: "check", handles: ["n:fix"] })).rejects.toMatchObject({
+      status: 501,
+      code: "move_not_built",
+    });
+  });
+
   test("typed traversal shortcuts normalize serde-tagged custom edge types", async () => {
     installFetchStub({
       mode: "neighborhood",
