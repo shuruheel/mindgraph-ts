@@ -2,7 +2,7 @@
 // idempotency key. New routes/actions require a semantics review.
 const READ_POSTS = new Set([
   "/memory/v1/context", "/memory/v1/profile", "/memory/v1/list",
-  "/search", "/retrieve/context", "/nodes/batch", "/edges/batch", "/subgraph",
+  "/search", "/retrieve/context", "/navigate", "/nodes/batch", "/edges/batch", "/subgraph",
   "/embeddings/search", "/embeddings/search-text", "/ontology/query",
   "/ontology/query/structured", "/ontology/objects/search",
 ]);

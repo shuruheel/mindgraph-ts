@@ -1499,6 +1499,205 @@ export interface RetrieveContextResponse {
     })[];
     edges: Record<string, unknown>[];
   };
+  /**
+   * Present when the read was a session working set (`effort: "minimal"`, or
+   * the `context` move of `POST /navigate`): the change list against the last
+   * result and the token to send on the session's next call.
+   */
+  working_set?: WorkingSetBlock;
+}
+
+/** One line of a working set's change list. */
+export interface WorkingSetChangeItem {
+  uid: string;
+  label?: string;
+  /** For `left`: why the item left the set. */
+  reason?: "faded" | "dropped" | (string & {});
+  /** For `changed`: the item's standing now. */
+  standing?: string;
+}
+
+/** The `working_set` block of a context read (recursive navigation D18 to D22). */
+export interface WorkingSetBlock {
+  /** Send this back on the session's next call. */
+  token: string;
+  turn: number;
+  /** Whether this call re-read the current turn (a call without text). */
+  reread: boolean;
+  /** Items new to the set. */
+  entered: WorkingSetChangeItem[];
+  /** Items that were in the last result and still are. */
+  kept: WorkingSetChangeItem[];
+  /** Items that were in the last result and are not in this one. */
+  left: WorkingSetChangeItem[];
+  /** Kept items whose standing differs from the last result. */
+  changed: WorkingSetChangeItem[];
+  /** Pins this read does not show (not readable, not visible, or did not fit). */
+  pins_not_shown?: string[];
+  strength: {
+    strongest_direct?: number;
+    strongest_session?: number;
+    /** The memory holds little on this subject. */
+    nothing_strong: boolean;
+  };
+  /** What the walk did. Absent when the session had nothing to rank by. */
+  walk?: {
+    seeds_admitted: number;
+    relays_per_round: number[];
+    max_fanout: number;
+    nodes_active: number;
+    unrelayed_mass: number;
+    promoted: number;
+    chosen_added: number;
+  };
+  parameters: {
+    rounds: number;
+    cue_decay: number;
+    cue_horizon_turns: number;
+    pool_min: number;
+    cues: number;
+    pins: number;
+    drops: number;
+  };
+}
+
+// ---- Navigation (POST /navigate) ----
+
+/**
+ * A move of `POST /navigate`. `check` is reserved: a server that has not built
+ * it answers 501 with code `move_not_built`.
+ */
+export type NavigateMove =
+  | "search"
+  | "open"
+  | "around"
+  | "follow"
+  | "walk"
+  | "lookup"
+  | "context"
+  | "more"
+  | "check";
+
+/** Arguments every listing move accepts. */
+export interface NavigateCommon {
+  /** Token budget of the result (default 4,000; at most 8,000). */
+  budget_tokens?: number;
+  /** Items to show (default 20; at most 50). */
+  limit?: number;
+  /** Restrict the move to a corpus Project's sources. */
+  project_uid?: string;
+}
+
+/**
+ * A listing move: `search`, `open`, `around`, `follow`, `walk`, `lookup`,
+ * `more` or `check`. Handles are `<letter>:<uid>` (`n:` item, `c:` source
+ * text, `e:` entity, `d:` document); a bare full uid is also accepted.
+ */
+export interface NavigateMoveRequest extends NavigateCommon {
+  action: Exclude<NavigateMove, "context">;
+  /** `search`: what to search for. */
+  query?: string;
+  /** `search`: `items`, `text` (source passages) or `both` (default). */
+  source?: "items" | "text" | "both";
+  /** `search`: limit the item leg to these node types. */
+  node_types?: string[];
+  /** `open`, `around`, `follow`, `walk`, `check`: the handles to start from (at most 32). */
+  handles?: string[];
+  /** `follow`, `walk`: limit to these link types. */
+  relations?: string[];
+  /** `follow`: `out`, `in` or `both` (default). */
+  direction?: "out" | "in" | "both";
+  /** `follow`: hops, 1 (default) to 3. */
+  depth?: number;
+  /** `around`: chunks on each side, 1 (default) to 3. */
+  window?: number;
+  /** `walk`: rounds, 1 to 4 (default 3). */
+  rounds?: number;
+  /** `open`: a character range `[start, end)` of each item's text. */
+  range?: [number, number];
+  /** `lookup`: the identifier or name. */
+  name?: string;
+  /** `more`: the continuation from the previous result's `token` (or its `next`). */
+  token?: string;
+}
+
+/**
+ * The `context` move: the session's working set. The response is the
+ * `/retrieve/context` response with a `working_set` block; send its
+ * `working_set.token` on the session's next call.
+ */
+export interface NavigateContextRequest {
+  action: "context";
+  /** What the user or agent just said. Omit to re-read the current turn. */
+  text?: string;
+  /** Items the agent judges relevant (handles). */
+  focus?: string[];
+  /** Items to keep in the working set until dropped. */
+  pin?: string[];
+  /** Items to remove from the working set for the rest of the session. */
+  drop?: string[];
+  /** The working-set token from the previous call; omit to start a session. */
+  token?: string;
+  /** Rounds of the walk, 1 to 4. */
+  rounds?: number;
+  /** Limit the walk to these link types. */
+  relations?: string[];
+  /** The world-time point of the read (ISO-8601). */
+  valid_at?: string;
+  /** Token budget of the result (default 2,000; at most 8,000). */
+  budget_tokens?: number;
+  project_uid?: string;
+}
+
+export type NavigateRequest = NavigateMoveRequest | NavigateContextRequest;
+
+/** Whether an item still stands. */
+export type NavigateStanding =
+  | { state: "current" }
+  | { state: "superseded"; by: string }
+  | { state: "withdrawn"; by: string; reason?: string | null };
+
+/** One item of a listing move. */
+export interface NavigateItem {
+  /** `<letter>:<uid>`; pass it to the next move. */
+  handle: string;
+  uid: string;
+  type: string;
+  title: string;
+  text: string;
+  /** How the item was reached, as a sentence with handles in brackets. */
+  reached: string;
+  standing: NavigateStanding;
+  score?: number;
+  /** `open` with a range, or a cut text: the character range shown. */
+  range?: [number, number];
+  /** With `range`: the length of the item's whole text. */
+  text_chars?: number;
+}
+
+/** A move valid from a result, ready to send as a request. */
+export type NavigateNext = Partial<NavigateMoveRequest> & { action: NavigateMove };
+
+/** The result of a listing move (one shape for every move, spec D10). */
+export interface NavigateResult {
+  move: string;
+  from?: string[];
+  state: "found" | "nothing_found" | "nothing_indexed" | "bad_handle" | "chain_end" | (string & {});
+  shown: number;
+  more_available?: number;
+  /** Why the move stopped: `token budget (n)`, `item limit (n)`, `search depth`, … */
+  stopped?: string | null;
+  items: NavigateItem[];
+  bad_handles?: string[];
+  bad_handle_message?: string | null;
+  notes?: string[];
+  next: NavigateNext[];
+  /** Continuation for `more`; absent when nothing more can be read. */
+  token?: string | null;
+  budget_tokens?: number;
+  used_tokens?: number;
+  /** The rendered result, written for a model to read. */
+  text: string;
 }
 
 /** Safe terminal reason. This does not authorize replaying a whole job. */

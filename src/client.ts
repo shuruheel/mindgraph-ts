@@ -77,6 +77,10 @@ import type {
   WaitForDocumentOptions,
   RetrieveContextRequest,
   RetrieveContextResponse,
+  NavigateRequest,
+  NavigateMoveRequest,
+  NavigateContextRequest,
+  NavigateResult,
   Job,
   ClearResponse,
   BatchRequest,
@@ -1301,6 +1305,22 @@ export class MindGraph {
       );
     }
     return res;
+  }
+
+  // ---- Navigation ----
+
+  /**
+   * One move of `POST /navigate`: an agent's read of the graph by handles.
+   * Listing moves (`search`, `open`, `around`, `follow`, `walk`, `lookup`,
+   * `more`, `check`) return a {@link NavigateResult} whose `text` is written
+   * for a model to read. `context` returns the `/retrieve/context` response
+   * with a `working_set` block; send `working_set.token` on the next call.
+   */
+  async navigate(req: NavigateContextRequest): Promise<RetrieveContextResponse>;
+  async navigate(req: NavigateMoveRequest): Promise<NavigateResult>;
+  async navigate(req: NavigateRequest): Promise<NavigateResult | RetrieveContextResponse>;
+  async navigate(req: NavigateRequest): Promise<NavigateResult | RetrieveContextResponse> {
+    return this.post("/navigate", req);
   }
 
   /** Backfill node_source provenance for existing graphs. */
