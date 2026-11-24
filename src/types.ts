@@ -1655,7 +1655,8 @@ export type NavigateRequest = NavigateMoveRequest | NavigateContextRequest;
 export type NavigateStanding =
   | { state: "current" }
   | { state: "superseded"; by: string }
-  | { state: "withdrawn"; by: string; reason?: string | null };
+  | { state: "withdrawn"; by: string; reason?: string | null }
+  | { state: "invalidated"; verdict: string; hop_depth: number; root_premise?: string };
 
 /** One item of a listing move. */
 export interface NavigateItem {
@@ -1668,6 +1669,14 @@ export interface NavigateItem {
   /** How the item was reached, as a sentence with handles in brackets. */
   reached: string;
   standing: NavigateStanding;
+  /** Statement dates from visible source documents, ascending. */
+  stated_at?: string[];
+  first_stated_at?: string;
+  last_stated_at?: string;
+  /** True when this is the most recent statement among visible restatements on the same subject. */
+  latest_on_subject?: boolean;
+  /** Later visible statements on the same subject-predicate, when present. */
+  later_statements?: Array<Record<string, unknown>>;
   score?: number;
   /** `open` with a range, or a cut text: the character range shown. */
   range?: [number, number];
