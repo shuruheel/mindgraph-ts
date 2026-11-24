@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.21.0 (2026-11-24)
+
+Adds `navigate()` for `POST /navigate`: an agent reads the graph by handles, one move at a time (recursive navigation, batch A4). Needs a server with `/navigate` (mindgraph-rs #266, #271, #273); older servers answer 404.
+
+### Added
+
+- **`MindGraph.navigate(req)` (`#28`).** The moves `search`, `open`, `around`,
+  `follow`, `walk`, `lookup`, `more` and `check` return a `NavigateResult`
+  (`move`, `state`, `items` with `handle`, `reached` and `standing`, `next`,
+  a `token` for `more`, and the rendered `text`). `context` returns the
+  `/retrieve/context` response, which gains a typed `working_set` block; send
+  its `working_set.token` on the session's next call. Overloads pick the
+  response type from `action`. Every move is a read, so `/navigate` joins the
+  read POSTs that retry on 503.
+- **`check` results.** `navigate({ action: "check", handles })` returns a
+  `NavigateCheckResult`: per item, `support` (`verdict` of `stands`,
+  `weakened`, `withdrawn`, `no_support_recorded` or `undetermined`, the
+  surviving `chains`, `hop_limit_reached`, `more_chains`) and `head` (`current`,
+  `superseded` with the current `heads`, `cycle` or `undetermined`).
+- **`linked` on items.** How many items `follow` would list one step out.
+  Absent for entities and inside a Project scope or under a classification
+  ceiling.
+
 ## 0.20.0 (2026-11-22)
 
 Adds **EA7 Use 2** weighted epistemic support chains and alternative-proof survival (`POST /traverse` `action: "epistemic_support"`), exported TypeScript response types, and read-only retry classification.

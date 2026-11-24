@@ -1564,8 +1564,8 @@ export interface WorkingSetBlock {
 // ---- Navigation (POST /navigate) ----
 
 /**
- * A move of `POST /navigate`. `check` is reserved: a server that has not built
- * it answers 501 with code `move_not_built`.
+ * A move of `POST /navigate`. A server older than the move answers 501 with
+ * code `move_not_built`.
  */
 export type NavigateMove =
   | "search"
@@ -1673,6 +1673,12 @@ export interface NavigateItem {
   range?: [number, number];
   /** With `range`: the length of the item's whole text. */
   text_chars?: number;
+  /**
+   * How many items `follow` would list one step out from this one. Absent for
+   * entities and when the caller's scope needs a per-item check (a Project, a
+   * classification ceiling).
+   */
+  linked?: number;
 }
 
 /** A move valid from a result, ready to send as a request. */
@@ -1698,6 +1704,53 @@ export interface NavigateResult {
   used_tokens?: number;
   /** The rendered result, written for a model to read. */
   text: string;
+}
+
+/** The `check` move: whether conclusions still stand. */
+export type NavigateCheckRequest = NavigateMoveRequest & { action: "check" };
+
+/**
+ * The support verdict of a `check`: `undetermined` when a chain is longer
+ * than the server's horizon (`max_hops`), so it could neither stand nor fall.
+ */
+export type NavigateSupportVerdict =
+  | "stands"
+  | "weakened"
+  | "withdrawn"
+  | "no_support_recorded"
+  | "undetermined"
+  | (string & {});
+
+/** One checked item: its support and where its replacement chain ends. */
+export interface NavigateCheckItem {
+  handle: string;
+  uid: string;
+  title: string;
+  support: {
+    verdict: NavigateSupportVerdict;
+    /** The verdict as a sentence. */
+    text: string;
+    /** Surviving support chains, each a list of handles from the item to a premise. */
+    chains: string[][];
+    /** A chain reached the horizon with support beyond it; the verdict is then `undetermined`. */
+    hop_limit_reached: boolean;
+    /** More chains exist than are listed; the verdict still holds. */
+    more_chains: boolean;
+    max_hops: number;
+  };
+  head: {
+    state: "current" | "superseded" | "cycle" | "undetermined" | (string & {});
+    /** The standing as a sentence. */
+    text: string;
+    /** With `superseded`: the handles of the current replacements. */
+    heads: string[];
+  };
+}
+
+/** The result of `check`: the listing envelope with checked items. */
+export interface NavigateCheckResult extends Omit<NavigateResult, "items"> {
+  move: "check";
+  items: NavigateCheckItem[];
 }
 
 /** Safe terminal reason. This does not authorize replaying a whole job. */

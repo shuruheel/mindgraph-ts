@@ -811,6 +811,40 @@ describe("field-name conventions", () => {
     expect(res.working_set?.left[0].reason).toBe("faded");
   });
 
+  test("navigate check returns support and standing per item", async () => {
+    installFetchStub({
+      move: "check",
+      from: ["n:rollback"],
+      state: "found",
+      shown: 1,
+      items: [
+        {
+          handle: "n:rollback",
+          uid: "rollback",
+          title: "Roll back the pool change",
+          support: {
+            verdict: "weakened",
+            text: "weakened: it or one of its premises was replaced, contradicted or withdrawn; 1 chain still stands",
+            chains: [["n:rollback", "n:cause"]],
+            hop_limit_reached: false,
+            more_chains: false,
+            max_hops: 12,
+          },
+          head: { state: "superseded", text: "superseded by [n:fix]", heads: ["n:fix"] },
+        },
+      ],
+      bad_handles: [],
+      next: [],
+      used_tokens: 40,
+      text: "check [n:rollback]",
+    });
+    const res = await newClient().navigate({ action: "check", handles: ["n:rollback"] });
+    expect(captured[0].body).toEqual({ action: "check", handles: ["n:rollback"] });
+    expect(res.items[0].support.verdict).toBe("weakened");
+    expect(res.items[0].support.chains[0]).toEqual(["n:rollback", "n:cause"]);
+    expect(res.items[0].head.heads).toEqual(["n:fix"]);
+  });
+
   test("navigate surfaces an unbuilt move as a typed error", async () => {
     vi.stubGlobal(
       "fetch",

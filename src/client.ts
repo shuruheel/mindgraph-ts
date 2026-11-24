@@ -81,6 +81,8 @@ import type {
   NavigateMoveRequest,
   NavigateContextRequest,
   NavigateResult,
+  NavigateCheckRequest,
+  NavigateCheckResult,
   Job,
   ClearResponse,
   BatchRequest,
@@ -1317,9 +1319,14 @@ export class MindGraph {
    * with a `working_set` block; send `working_set.token` on the next call.
    */
   async navigate(req: NavigateContextRequest): Promise<RetrieveContextResponse>;
+  async navigate(req: NavigateCheckRequest): Promise<NavigateCheckResult>;
   async navigate(req: NavigateMoveRequest): Promise<NavigateResult>;
-  async navigate(req: NavigateRequest): Promise<NavigateResult | RetrieveContextResponse>;
-  async navigate(req: NavigateRequest): Promise<NavigateResult | RetrieveContextResponse> {
+  async navigate(
+    req: NavigateRequest,
+  ): Promise<NavigateResult | NavigateCheckResult | RetrieveContextResponse>;
+  async navigate(
+    req: NavigateRequest,
+  ): Promise<NavigateResult | NavigateCheckResult | RetrieveContextResponse> {
     return this.post("/navigate", req);
   }
 
